@@ -1,0 +1,92 @@
+
+export enum BreakerId {
+  Q1 = 'Q1', // Rectifier Input
+  Q2 = 'Q2', // Bypass Input
+  Q3 = 'Q3', // Maintenance Bypass
+  Q4 = 'Q4', // UPS Output
+  QF1 = 'QF1', // Battery Breaker
+  Load1 = 'Load1', // Critical Load A
+  Load2 = 'Load2'  // Critical Load B
+}
+
+export enum ComponentStatus {
+  OFF = 'OFF',
+  STARTING = 'STARTING',
+  NORMAL = 'NORMAL',
+  ALARM = 'ALARM',
+  FAULT = 'FAULT'
+}
+
+export interface ComponentDetail {
+    status: ComponentStatus;
+    temperature: number; // Celsius
+    loadPct: number;     // 0-100%
+    efficiency: number;  // 0-1.0
+    voltageOut: number;  // Local voltage reading
+}
+
+export interface SimulationState {
+  breakers: Record<BreakerId, boolean>; 
+  voltages: {
+    utilityInput: number;
+    bypassInput: number;
+    dcBus: number;
+    loadBus: number;
+  };
+  frequencies: {
+    utility: number;
+    inverter: number;
+    load: number;
+  };
+  currents: {
+    input: number;
+    battery: number; 
+    output: number;
+  };
+  battery: {
+    chargeLevel: number; 
+    temp: number;
+    health: number;
+    voltage: number; // Terminal voltage
+  };
+  components: {
+    rectifier: ComponentDetail;
+    inverter: ComponentDetail;
+    staticSwitch: { 
+        mode: 'INVERTER' | 'BYPASS'; 
+        status: 'OK' | 'ALARM';
+        syncError: number; // Phase difference in degrees
+        forceBypass?: boolean; // Manual override flag
+    };
+  };
+  alarms: string[];
+  // timestamp for physics delta calculations
+  lastTick: number;
+}
+
+export interface ProcedureStep {
+  id: number;
+  description: string;
+  expectedAction?: {
+    type: 'BREAKER' | 'SWITCH' | 'WAIT';
+    target: string;
+    value: any;
+  };
+  validationFn: (state: SimulationState) => boolean;
+  hint?: string;
+}
+
+export interface Procedure {
+  id: string;
+  name: string;
+  description: string;
+  steps: ProcedureStep[];
+  initialState: Partial<SimulationState>;
+}
+
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  message: string;
+  type: 'INFO' | 'ACTION' | 'ALARM' | 'ERROR';
+}

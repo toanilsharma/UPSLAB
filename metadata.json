@@ -1,0 +1,5 @@
+{
+  "name": "Industrial UPS Digital Twin",
+  "description": "High-fidelity React 18 simulation of industrial UPS operations, failure scenarios, and maintenance switching procedures. Features a dynamic Single Line Diagram, physics-based power flow, and SCADA-style HMI.",
+  "requestFramePermissions": []
+}
