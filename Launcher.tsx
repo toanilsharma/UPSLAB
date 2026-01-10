@@ -1,67 +1,128 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import App from './App';
 import ParallelApp from './ParallelApp';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Launcher = () => {
-    const [mode, setMode] = useState<'SELECT' | 'SINGLE' | 'PARALLEL'>('SELECT');
+    const [mode, setMode] = useState<'BOOT' | 'SELECT' | 'SINGLE' | 'PARALLEL'>('BOOT');
 
-    if (mode === 'SINGLE') return <div className="relative"><button onClick={() => setMode('SELECT')} className="absolute top-4 left-24 z-50 px-3 py-1 bg-slate-800 text-xs text-slate-400 border border-slate-600 rounded hover:text-white">BACK TO MENU</button><App /></div>;
-    if (mode === 'PARALLEL') return <div className="relative"><button onClick={() => setMode('SELECT')} className="absolute top-4 left-24 z-50 px-3 py-1 bg-slate-800 text-xs text-slate-400 border border-slate-600 rounded hover:text-white">BACK TO MENU</button><ParallelApp /></div>;
+    useEffect(() => {
+        // Fake Boot Sequence
+        const timer = setTimeout(() => setMode('SELECT'), 2500);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (mode === 'BOOT') {
+        return (
+            <div className="flex h-screen w-screen bg-black items-center justify-center overflow-hidden">
+                <div className="text-center">
+                    <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 1, type: "spring" }}
+                        className="text-6xl font-black text-white italic tracking-tighter mb-4"
+                    >
+                        OMNI<span className="text-cyan-500">POWER</span>
+                    </motion.div>
+                    <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: 200 }}
+                        transition={{ delay: 0.5, duration: 1.5 }}
+                        className="h-1 bg-cyan-600 mx-auto rounded-full"
+                    />
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1 }}
+                        className="mt-4 text-cyan-500/60 font-mono text-xs tracking-[0.5em]"
+                    >
+                        INITIALIZING PHYSICS KERNEL...
+                    </motion.p>
+                </div>
+            </div>
+        );
+    }
+
+    if (mode === 'SINGLE') return <div className="relative animate-fade-in"><button onClick={() => setMode('SELECT')} className="absolute top-5 left-[340px] z-50 px-4 py-1.5 bg-slate-800/80 backdrop-blur text-[10px] font-bold text-slate-400 border border-slate-600 rounded hover:text-white hover:border-cyan-500 transition-all">← RETURN TO MENU</button><App /></div>;
+    if (mode === 'PARALLEL') return <div className="relative animate-fade-in"><button onClick={() => setMode('SELECT')} className="absolute top-5 left-[340px] z-50 px-4 py-1.5 bg-slate-800/80 backdrop-blur text-[10px] font-bold text-slate-400 border border-slate-600 rounded hover:text-white hover:border-cyan-500 transition-all">← RETURN TO MENU</button><ParallelApp /></div>;
 
     return (
-        <div className="flex h-screen w-screen bg-slate-950 items-center justify-center p-8 font-sans">
-            <div className="max-w-4xl w-full grid grid-cols-2 gap-8">
+        <div className="flex h-screen w-screen bg-[#020617] items-center justify-center p-8 font-sans overflow-hidden relative">
+
+            {/* Background Ambience */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900/40 via-black to-black opacity-80 pointer-events-none"></div>
+
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="max-w-5xl w-full grid grid-cols-2 gap-12 relative z-10"
+            >
 
                 {/* Header */}
                 <div className="col-span-2 text-center mb-8">
-                    <h1 className="text-5xl font-black text-slate-100 italic tracking-tighter">OMNI<span className="text-cyan-500">POWER</span></h1>
-                    <p className="text-slate-500 mt-2 font-mono tracking-widest text-sm">DIGITAL TWIN SIMULATION SUITE</p>
+                    <h1 className="text-6xl font-black text-white italic tracking-tighter drop-shadow-2xl">OMNI<span className="text-cyan-500">POWER</span></h1>
+                    <div className="flex items-center justify-center gap-4 mt-4">
+                        <div className="h-px w-12 bg-slate-800"></div>
+                        <p className="text-slate-500 font-mono tracking-[0.3em] text-xs">DIGITAL TWIN SIMULATION SUITE</p>
+                        <div className="h-px w-12 bg-slate-800"></div>
+                    </div>
                 </div>
 
                 {/* Single Module Card */}
-                <button onClick={() => setMode('SINGLE')} className="group relative h-64 bg-slate-900 border border-slate-800 rounded-xl p-6 hover:border-cyan-500 transition-all hover:shadow-[0_0_30px_rgba(6,182,212,0.15)] text-left flex flex-col justify-between overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 font-black text-9xl leading-none select-none group-hover:opacity-20 transition-opacity">1</div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-2 h-2 rounded-full bg-cyan-400"></div>
-                            <span className="text-cyan-400 text-xs font-bold tracking-widest">STANDARD</span>
+                <motion.button
+                    onClick={() => setMode('SINGLE')}
+                    whileHover={{ scale: 1.02, translateY: -5 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="group relative h-80 bg-slate-900/50 backdrop-blur-md border border-slate-800/60 rounded-2xl p-8 text-left flex flex-col justify-between overflow-hidden shadow-2xl hover:shadow-cyan-900/20 hover:border-cyan-500/50 transition-all duration-500"
+                >
+                    <div className="absolute top-0 right-0 p-6 opacity-5 font-black text-[12rem] leading-none select-none group-hover:opacity-10 transition-opacity translate-x-12 -translate-y-12">1</div>
+
+                    <div className="relative z-10">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/50 border border-cyan-800/30 mb-4">
+                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]"></div>
+                            <span className="text-cyan-400 text-[10px] font-bold tracking-widest">STANDARD EDITION</span>
                         </div>
-                        <h2 className="text-3xl font-bold text-white mb-2">Single Module</h2>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Single UPS module simulation with dedicated battery bank.
-                            Ideal for learning basic conversion logic, fault clearing, and standard operational procedures.
+                        <h2 className="text-4xl font-bold text-white mb-3 group-hover:text-cyan-400 transition-colors">Single Module</h2>
+                        <p className="text-slate-400 text-sm leading-relaxed pr-8">
+                            Master the fundamentals of double-conversion UPS topology.
+                            Simulate rectifier walk-in, battery discharge curves, and static bypass transfers in a controlled environment.
                         </p>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-500 group-hover:text-cyan-400 text-sm font-bold transition-colors">
-                        LAUNCH SIMULATOR <span>→</span>
+
+                    <div className="flex items-center gap-3 text-slate-500 group-hover:text-cyan-400 text-xs font-bold tracking-widest transition-colors mt-8">
+                        LAUNCH SIMULATION <motion.span animate={{ x: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 1.5 }}>→</motion.span>
                     </div>
-                </button>
+                </motion.button>
 
                 {/* Parallel Card */}
-                <button onClick={() => setMode('PARALLEL')} className="group relative h-64 bg-slate-900 border border-slate-800 rounded-xl p-6 hover:border-purple-500 transition-all hover:shadow-[0_0_30px_rgba(168,85,247,0.15)] text-left flex flex-col justify-between overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 font-black text-9xl leading-none select-none group-hover:opacity-20 transition-opacity">2</div>
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-2 h-2 rounded-full bg-purple-400"></div>
-                            <span className="text-purple-400 text-xs font-bold tracking-widest">ADVANCED</span>
+                <motion.button
+                    onClick={() => setMode('PARALLEL')}
+                    whileHover={{ scale: 1.02, translateY: -5 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="group relative h-80 bg-slate-900/50 backdrop-blur-md border border-slate-800/60 rounded-2xl p-8 text-left flex flex-col justify-between overflow-hidden shadow-2xl hover:shadow-purple-900/20 hover:border-purple-500/50 transition-all duration-500"
+                >
+                    <div className="absolute top-0 right-0 p-6 opacity-5 font-black text-[12rem] leading-none select-none group-hover:opacity-10 transition-opacity translate-x-12 -translate-y-12">2</div>
+
+                    <div className="relative z-10">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/50 border border-purple-800/30 mb-4">
+                            <div className="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_10px_#a855f7]"></div>
+                            <span className="text-purple-400 text-[10px] font-bold tracking-widest">ENTERPRISE EDITION</span>
                         </div>
-                        <h2 className="text-3xl font-bold text-white mb-2">Parallel Redundant</h2>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Dual-module (N+1) configuration with parallel load sharing.
-                            Master synchronization, load balancing, maintenance isolation, and redundancy bypass operations.
+                        <h2 className="text-4xl font-bold text-white mb-3 group-hover:text-purple-400 transition-colors">Parallel Redundant</h2>
+                        <p className="text-slate-400 text-sm leading-relaxed pr-8">
+                            Advanced N+1 architecture simulation.
+                            Execute complex load sharing strategies, synchronization fault injection, and maintenance isolation without load loss.
                         </p>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-500 group-hover:text-purple-400 text-sm font-bold transition-colors">
-                        LAUNCH SIMULATOR <span>→</span>
+
+                    <div className="flex items-center gap-3 text-slate-500 group-hover:text-purple-400 text-xs font-bold tracking-widest transition-colors mt-8">
+                        LAUNCH SIMULATION <motion.span animate={{ x: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 1.5 }}>→</motion.span>
                     </div>
-                </button>
+                </motion.button>
 
-                <div className="col-span-2 text-center text-slate-600 text-xs font-mono mt-8">
-                    v2.5.0-STABLE | POWERED BY REACT PHYSICS ENGINE
-                </div>
-
-            </div>
+            </motion.div>
         </div>
     );
 };
