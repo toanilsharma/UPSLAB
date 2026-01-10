@@ -45,7 +45,7 @@ const Launcher = () => {
     }
 
     if (mode === 'SINGLE') return <div className="relative animate-fade-in"><button onClick={() => setMode('SELECT')} className="absolute top-5 left-[340px] z-50 px-4 py-1.5 bg-slate-800/80 backdrop-blur text-[10px] font-bold text-slate-400 border border-slate-600 rounded hover:text-white hover:border-cyan-500 transition-all">← RETURN TO MENU</button><App /></div>;
-    if (mode === 'PARALLEL') return <div className="relative animate-fade-in"><button onClick={() => setMode('SELECT')} className="absolute top-5 left-[340px] z-50 px-4 py-1.5 bg-slate-800/80 backdrop-blur text-[10px] font-bold text-slate-400 border border-slate-600 rounded hover:text-white hover:border-cyan-500 transition-all">← RETURN TO MENU</button><ParallelApp /></div>;
+    if (mode === 'PARALLEL') return <ParallelApp onReturnToMenu={() => setMode('SELECT')} />;
 
     return (
         <div className="flex h-screen w-screen bg-[#020617] items-center justify-center p-8 font-sans overflow-hidden relative">
@@ -71,13 +71,11 @@ const Launcher = () => {
                 </div>
 
                 {/* Single Module Card */}
-                <motion.button
+                <button
                     onClick={() => setMode('SINGLE')}
-                    whileHover={{ scale: 1.02, translateY: -5 }}
-                    whileTap={{ scale: 0.98 }}
                     className="group relative h-80 bg-slate-900/50 backdrop-blur-md border border-slate-800/60 rounded-2xl p-8 text-left flex flex-col justify-between overflow-hidden shadow-2xl hover:shadow-cyan-900/20 hover:border-cyan-500/50 transition-all duration-500"
                 >
-                    <div className="absolute top-0 right-0 p-6 opacity-5 font-black text-[12rem] leading-none select-none group-hover:opacity-10 transition-opacity translate-x-12 -translate-y-12">1</div>
+                    <div className="absolute top-0 right-0 p-6 opacity-5 font-black text-[12rem] leading-none select-none group-hover:opacity-10 transition-opacity translate-x-12 -translate-y-12 pointer-events-none">1</div>
 
                     <div className="relative z-10">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/50 border border-cyan-800/30 mb-4">
@@ -94,16 +92,14 @@ const Launcher = () => {
                     <div className="flex items-center gap-3 text-slate-500 group-hover:text-cyan-400 text-xs font-bold tracking-widest transition-colors mt-8">
                         LAUNCH SIMULATION <motion.span animate={{ x: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 1.5 }}>→</motion.span>
                     </div>
-                </motion.button>
+                </button>
 
                 {/* Parallel Card */}
-                <motion.button
+                <button
                     onClick={() => setMode('PARALLEL')}
-                    whileHover={{ scale: 1.02, translateY: -5 }}
-                    whileTap={{ scale: 0.98 }}
                     className="group relative h-80 bg-slate-900/50 backdrop-blur-md border border-slate-800/60 rounded-2xl p-8 text-left flex flex-col justify-between overflow-hidden shadow-2xl hover:shadow-purple-900/20 hover:border-purple-500/50 transition-all duration-500"
                 >
-                    <div className="absolute top-0 right-0 p-6 opacity-5 font-black text-[12rem] leading-none select-none group-hover:opacity-10 transition-opacity translate-x-12 -translate-y-12">2</div>
+                    <div className="absolute top-0 right-0 p-6 opacity-5 font-black text-[12rem] leading-none select-none group-hover:opacity-10 transition-opacity translate-x-12 -translate-y-12 pointer-events-none">2</div>
 
                     <div className="relative z-10">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/50 border border-purple-800/30 mb-4">
@@ -120,7 +116,7 @@ const Launcher = () => {
                     <div className="flex items-center gap-3 text-slate-500 group-hover:text-purple-400 text-xs font-bold tracking-widest transition-colors mt-8">
                         LAUNCH SIMULATION <motion.span animate={{ x: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 1.5 }}>→</motion.span>
                     </div>
-                </motion.button>
+                </button>
 
             </motion.div>
         </div>
