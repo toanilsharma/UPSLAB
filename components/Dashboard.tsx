@@ -59,7 +59,7 @@ export const Dashboard = ({ state }: { state: any }) => {
     }
 
     return (
-        <div className="flex items-center gap-4 px-4 py-2 bg-slate-900 border-l border-r border-slate-700 h-full shadow-inner">
+        <div className="dashboard flex items-center gap-3 px-4 py-2 bg-slate-900 border-l border-r border-slate-700 h-full shadow-inner">
             <DigitalMeter
                 label="Mains Input"
                 value={state.voltages.utilityInput}

@@ -5,9 +5,13 @@ import { Waveforms } from './components/Waveforms';
 import { ProcedurePanel } from './components/ProcedurePanel';
 import { Faceplate } from './components/Faceplate';
 import { Dashboard } from './components/Dashboard';
+import { TutorialOverlay, useTutorial } from './components/TutorialOverlay';
+import { AchievementPanel, AchievementToast } from './components/AchievementPanel';
 import { INITIAL_STATE, PROC_MAINT_BYPASS, PROC_RETURN_FROM_BYPASS, PROC_BLACK_START, PROC_COLD_START, PROC_EMERGENCY, PROC_FAILURE_RECOVERY } from './constants';
 import { calculatePowerFlow, checkInterlock } from './services/engine';
 import { SimulationState, BreakerId, Procedure, ComponentStatus, LogEntry } from './types';
+import { audioService } from './services/audioService';
+import { achievementService, Achievement } from './services/achievementService';
 
 interface AppProps {
     onReturnToMenu?: () => void;
@@ -23,6 +27,12 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
     const [notification, setNotification] = useState<{ msg: string, type: 'error' | 'info' } | null>(null);
     const [showInstructor, setShowInstructor] = useState(false);
     const [mistakes, setMistakes] = useState(0);
+    const [procedureStartTime, setProcedureStartTime] = useState<number>(0);
+
+    // NEW FEATURES
+    const { showTutorial, completeTutorial, skipTutorial, restartTutorial } = useTutorial();
+    const [showAchievements, setShowAchievements] = useState(false);
+    const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
 
     // FACEPLATE STATE
     const [selectedComp, setSelectedComp] = useState<string | null>(null);
@@ -81,12 +91,16 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
 
         const check = checkInterlock('BREAKER', id, newState, state);
         if (!check.allowed) {
+            audioService.play('error');
             setNotification({ msg: check.reason || 'Blocked', type: 'error' });
             addLog(`Interlock blocked ${id}: ${check.reason}`, 'ERROR');
             setTimeout(() => setNotification(null), 3000);
             if (activeProcedure) setMistakes(m => m + 1);
             return;
         }
+
+        // Play sound effect
+        audioService.play(newState ? 'breaker_close' : 'breaker_open');
 
         addLog(`Operator ${newState ? 'CLOSED' : 'OPENED'} Breaker ${id}`, 'ACTION');
         setState(prev => {
@@ -99,7 +113,16 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
     const handleFaceplateAction = (action: string) => {
         if (!selectedComp) return;
 
+        // Play sound
+        if (action === 'START') audioService.play('component_start');
+        else if (action === 'STOP') audioService.play('component_stop');
+        else if (action === 'TO_BYPASS' || action === 'TO_INVERTER') audioService.play('static_switch');
+        else audioService.play('button_click');
+
         addLog(`Command Sent to ${selectedComp.toUpperCase()}: ${action}`, 'ACTION');
+
+        // Track inspection for achievements
+        achievementService.onComponentInspected(selectedComp);
 
         setState(prev => {
             const next = { ...prev, components: { ...prev.components } };
@@ -112,7 +135,7 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
             else if (selectedComp === 'inverter') {
                 if (action === 'START') next.components.inverter.status = ComponentStatus.STARTING;
                 if (action === 'STOP') next.components.inverter.status = ComponentStatus.OFF;
-                if (action === 'RESET' && next.components.inverter.status === ComponentStatus.FAULT) next.components.inverter.status = ComponentStatus.OFF;
+                if (action === 'RESET' && next.components.inverter.status === ComponentStatus.FAULT) next.components.rectifier.status = ComponentStatus.OFF;
             }
             else if (selectedComp === 'staticSwitch') {
                 if (action === 'TO_BYPASS') {
@@ -124,6 +147,7 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
                         next.components.staticSwitch.mode = 'INVERTER';
                         next.components.staticSwitch.forceBypass = false;
                     } else {
+                        audioService.play('error');
                         setNotification({ msg: 'Transfer Failed: Inverter Not Ready', type: 'error' });
                     }
                 }
@@ -134,6 +158,7 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
 
     // Instructor Faults
     const injectFault = (type: string) => {
+        audioService.play('alarm_warning');
         addLog(`FAULT INJECTION: ${type}`, 'ALARM');
         setState(prev => {
             const next = JSON.parse(JSON.stringify(prev)); // Deep clone
@@ -169,13 +194,34 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
         setProcedureCompleted(false);
         setFailReason(null);
         setMistakes(0);
+        setProcedureStartTime(Date.now()); // Track start time for achievements
         setState(proc.initialState as SimulationState);
     };
 
     const nextStep = () => {
         if (!activeProcedure) return;
-        if (stepIndex < activeProcedure.steps.length - 1) setStepIndex(stepIndex + 1);
-        else setProcedureCompleted(true);
+
+        if (stepIndex < activeProcedure.steps.length - 1) {
+            audioService.play('success');
+            setStepIndex(stepIndex + 1);
+        } else {
+            // Procedure complete!
+            const timeElapsed = (Date.now() - procedureStartTime) / 1000;
+            audioService.play('success');
+            setProcedureCompleted(true);
+
+            // Track achievement
+            const newAchievements = achievementService.onProcedureComplete(
+                activeProcedure.id,
+                mistakes,
+                timeElapsed
+            );
+
+            // Show achievement toast if any unlocked
+            if (newAchievements.length > 0) {
+                setNewAchievement(newAchievements[0]);
+            }
+        }
     };
 
     // Boot Screen
@@ -210,6 +256,25 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
                 </div>
             )}
 
+            {/* TUTORIAL OVERLAY */}
+            <TutorialOverlay
+                show={showTutorial}
+                onComplete={completeTutorial}
+                onSkip={skipTutorial}
+            />
+
+            {/* ACHIEVEMENT PANEL */}
+            <AchievementPanel
+                visible={showAchievements}
+                onClose={() => setShowAchievements(false)}
+            />
+
+            {/* ACHIEVEMENT TOAST */}
+            <AchievementToast
+                achievement={newAchievement}
+                onDismiss={() => setNewAchievement(null)}
+            />
+
             {/* LEFT COLUMN: SIMULATION */}
             <div className="flex-1 flex flex-col p-0 h-full min-h-0 relative">
 
@@ -226,6 +291,8 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
 
                     <div className="flex flex-col gap-2">
                         <button onClick={() => startProcedure('')} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600 text-xs font-bold text-slate-300 transition-colors">RESET SIM</button>
+                        <button onClick={() => setShowAchievements(true)} className="px-3 py-1 bg-slate-800 hover:bg-amber-900 rounded border border-slate-600 hover:border-amber-500 text-xs font-bold text-slate-300 hover:text-amber-400 transition-colors">🏆 ACHIEVEMENTS</button>
+                        <button onClick={restartTutorial} className="px-3 py-1 bg-slate-800 hover:bg-blue-900 rounded border border-slate-600 hover:border-blue-500 text-xs font-bold text-slate-300 hover:text-blue-400 transition-colors">? HELP</button>
                         <button onClick={() => setShowInstructor(!showInstructor)} className={`px-3 py-1 rounded border text-xs font-bold transition-colors ${showInstructor ? 'bg-red-900 border-red-500 text-white' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>INSTRUCTOR</button>
                     </div>
                 </div>

@@ -69,21 +69,42 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
         if (!selectedComp) return;
         const [mod, comp] = selectedComp.split('.');
         if (!mod || !comp) return;
+
         addLog(`Command Sent to ${selectedComp.toUpperCase()}: ${action}`, 'ACTION');
+
         setState(prev => {
             const next = JSON.parse(JSON.stringify(prev)) as ParallelSimulationState;
             const targetModule = next.modules[mod as 'module1' | 'module2'];
             if (!targetModule) return prev;
+
             if (comp === 'rectifier') {
                 if (action === 'START') targetModule.rectifier.status = ComponentStatus.STARTING;
                 if (action === 'STOP') targetModule.rectifier.status = ComponentStatus.OFF;
-                if (action === 'RESET') targetModule.rectifier.status = ComponentStatus.OFF;
+                if (action === 'RESET' && targetModule.rectifier.status === ComponentStatus.FAULT) {
+                    targetModule.rectifier.status = ComponentStatus.OFF;
+                }
             } else if (comp === 'inverter') {
                 if (action === 'START') targetModule.inverter.status = ComponentStatus.STARTING;
                 if (action === 'STOP') targetModule.inverter.status = ComponentStatus.OFF;
+                if (action === 'RESET' && targetModule.inverter.status === ComponentStatus.FAULT) {
+                    targetModule.inverter.status = ComponentStatus.OFF;
+                }
             } else if (comp === 'staticSwitch') {
-                if (action === 'TO_BYPASS') targetModule.staticSwitch.mode = 'BYPASS';
-                if (action === 'TO_INVERTER') targetModule.staticSwitch.mode = 'INVERTER';
+                if (action === 'TO_BYPASS') {
+                    targetModule.staticSwitch.mode = 'BYPASS';
+                    targetModule.staticSwitch.forceBypass = true; // Force bypass mode
+                }
+                if (action === 'TO_INVERTER') {
+                    // Only allow transfer to inverter if inverter is ready
+                    if (targetModule.inverter.status === ComponentStatus.NORMAL && targetModule.inverter.voltageOut > 390) {
+                        targetModule.staticSwitch.mode = 'INVERTER';
+                        targetModule.staticSwitch.forceBypass = false;
+                    } else {
+                        setNotification({ msg: `Transfer Failed: ${mod.toUpperCase()} Inverter Not Ready`, type: 'error' });
+                        setTimeout(() => setNotification(null), 3000);
+                        return prev; // Don't update state if transfer fails
+                    }
+                }
             }
             return calculateParallelPowerFlow(next);
         });

@@ -49,6 +49,7 @@ export interface BatteryDetail {
     temp: number;
     health: number;
     voltage: number; // Terminal voltage
+    current: number; // Charge (+) or discharge (-) current in Amps
 }
 
 export interface UPSModuleState {

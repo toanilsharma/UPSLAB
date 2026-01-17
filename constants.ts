@@ -31,6 +31,11 @@ export const INITIAL_STATE: SimulationState = {
     temp: 25,
     health: 100,
     voltage: 540,
+    current: 2, // trickle charge
+    cycleCount: 50, // Simulated history
+    nominalCapacityAh: 100, // 100Ah VRLA battery bank
+    peukertExponent: 1.15, // Typical for VRLA
+    effectiveCapacityAh: 100, // Calculated dynamically
   },
   components: {
     rectifier: {
@@ -368,9 +373,9 @@ export const PROC_FAILURE_RECOVERY: Procedure = {
   description: 'Respond to Rectifier Failure alarm to prevent Battery exhaustion.',
   initialState: {
     ...INITIAL_STATE,
-    components: { 
-        ...INITIAL_STATE.components, 
-        rectifier: { ...INITIAL_STATE.components.rectifier, status: ComponentStatus.FAULT } 
+    components: {
+      ...INITIAL_STATE.components,
+      rectifier: { ...INITIAL_STATE.components.rectifier, status: ComponentStatus.FAULT }
     },
     alarms: ['RECTIFIER FAILURE', 'BATTERY DISCHARGING'],
     voltages: { ...INITIAL_STATE.voltages, dcBus: 500 }

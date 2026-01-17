@@ -1,5 +1,5 @@
 
-import { ParallelSimulationState, ParallelBreakerId, ComponentStatus, ModuleState } from '../parallel_types';
+import { ParallelSimulationState, ParallelBreakerId, ComponentStatus, UPSModuleState } from '../parallel_types';
 
 const AMBIENT_TEMP = 22; // Server room temperature
 const THERMAL_MASS = 0.08; // Realistic slow heating
@@ -7,13 +7,13 @@ const COOLING_FACTOR = 0.015;
 
 // Process a single module with realistic physics (ported from single module)
 const processModule = (
-    moduleState: ModuleState,
+    moduleState: UPSModuleState,
     utilityInput: number,
     breakers: { mainInput: boolean; bypassInput: boolean; batteryBreaker: boolean; output: boolean },
     now: number,
     dcSource: 'RECT' | 'BATTERY' | 'NONE'
-): ModuleState => {
-    const module = JSON.parse(JSON.stringify(moduleState)) as ModuleState;
+): UPSModuleState => {
+    const module = JSON.parse(JSON.stringify(moduleState)) as UPSModuleState;
 
     // --- 1. RECTIFIER PHYSICS: "Walk-in" (Soft Start) Logic ---
     if (module.rectifier.status === ComponentStatus.FAULT) {
@@ -161,7 +161,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
     );
 
     // --- STATIC SWITCH LOGIC FOR EACH MODULE ---
-    const processStaticSwitch = (module: ModuleState, bypassAvailable: boolean) => {
+    const processStaticSwitch = (module: UPSModuleState, bypassAvailable: boolean) => {
         const inverterReady = module.inverter.status === ComponentStatus.NORMAL && module.inverter.voltageOut > 390;
 
         // Calculate sync error

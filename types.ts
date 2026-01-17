@@ -18,15 +18,15 @@ export enum ComponentStatus {
 }
 
 export interface ComponentDetail {
-    status: ComponentStatus;
-    temperature: number; // Celsius
-    loadPct: number;     // 0-100%
-    efficiency: number;  // 0-1.0
-    voltageOut: number;  // Local voltage reading
+  status: ComponentStatus;
+  temperature: number; // Celsius
+  loadPct: number;     // 0-100%
+  efficiency: number;  // 0-1.0
+  voltageOut: number;  // Local voltage reading
 }
 
 export interface SimulationState {
-  breakers: Record<BreakerId, boolean>; 
+  breakers: Record<BreakerId, boolean>;
   voltages: {
     utilityInput: number;
     bypassInput: number;
@@ -40,23 +40,29 @@ export interface SimulationState {
   };
   currents: {
     input: number;
-    battery: number; 
+    battery: number;
     output: number;
   };
   battery: {
-    chargeLevel: number; 
-    temp: number;
-    health: number;
-    voltage: number; // Terminal voltage
+    chargeLevel: number;  // 0-100% state of charge
+    temp: number;         // Celsius
+    health: number;       // 0-100% state of health
+    voltage: number;      // Terminal voltage
+    current: number;      // Charge (+) or discharge (-) current in Amps
+    cycleCount: number;   // Total charge/discharge cycles for SOH
+    // Peukert parameters
+    nominalCapacityAh: number;   // Nominal capacity in Amp-hours
+    peukertExponent: number;     // Typically 1.05-1.3 for VRLA
+    effectiveCapacityAh: number; // Calculated based on discharge rate
   };
   components: {
     rectifier: ComponentDetail;
     inverter: ComponentDetail;
-    staticSwitch: { 
-        mode: 'INVERTER' | 'BYPASS'; 
-        status: 'OK' | 'ALARM';
-        syncError: number; // Phase difference in degrees
-        forceBypass?: boolean; // Manual override flag
+    staticSwitch: {
+      mode: 'INVERTER' | 'BYPASS';
+      status: 'OK' | 'ALARM';
+      syncError: number; // Phase difference in degrees
+      forceBypass?: boolean; // Manual override flag
     };
   };
   alarms: string[];
