@@ -35,8 +35,23 @@ export const ParallelProcedurePanel: React.FC<ProcedurePanelProps> = ({
                 </button>
 
                 <button onClick={() => onSelectProcedure('module_iso')} className="bg-slate-700 hover:bg-teal-600 p-3 rounded text-left border border-slate-600">
-                    <div className="font-bold">SOP-P-02: Module Isolation</div>
+                    <div className="font-bold">SOP-P-02: Module Isolation (Quick)</div>
                     <div className="text-xs text-slate-400">Isolate M1, Run on M2</div>
+                </button>
+
+                <button onClick={() => onSelectProcedure('module1_pm')} className="bg-slate-700 hover:bg-purple-600 p-3 rounded text-left border border-slate-600">
+                    <div className="font-bold">SOP-P-03: Module 1 PM Isolation</div>
+                    <div className="text-xs text-slate-400">Full isolation procedure for preventive maintenance</div>
+                </button>
+
+                <button onClick={() => onSelectProcedure('module1_restore')} className="bg-slate-700 hover:bg-green-600 p-3 rounded text-left border border-slate-600">
+                    <div className="font-bold">SOP-P-04: Module 1 Restoration</div>
+                    <div className="text-xs text-slate-400">Restore Module 1 after maintenance complete</div>
+                </button>
+
+                <button onClick={() => onSelectProcedure('utility_fail_test')} className="bg-slate-700 hover:bg-amber-600 p-3 rounded text-left border border-slate-600">
+                    <div className="font-bold">SOP-P-05: Utility Failure Test</div>
+                    <div className="text-xs text-slate-400">Simulate total power failure & battery backup test</div>
                 </button>
 
                 <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-700/50 rounded text-sm text-yellow-200">

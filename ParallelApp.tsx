@@ -5,7 +5,7 @@ import { ParallelWaveforms } from './components/ParallelWaveforms';
 import { ParallelProcedurePanel } from './components/ParallelProcedurePanel';
 import { ParallelFaceplate } from './components/ParallelFaceplate';
 import { ParallelDashboard } from './components/ParallelDashboard';
-import { INITIAL_PARALLEL_STATE, PROC_SYSTEM_MAINT_BYPASS, PROC_MODULE_ISOLATION } from './parallel_constants';
+import { INITIAL_PARALLEL_STATE, PROC_SYSTEM_MAINT_BYPASS, PROC_MODULE_ISOLATION, PROC_MODULE_1_PM, PROC_MODULE_1_RESTORE, PROC_UTILITY_FAILURE_TEST } from './parallel_constants';
 import { calculateParallelPowerFlow, checkParallelInterlock } from './services/parallel_engine';
 import { ParallelSimulationState, ParallelBreakerId, ParallelProcedure, ComponentStatus, LogEntry } from './parallel_types';
 
@@ -103,6 +103,9 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
         let proc;
         if (procId === 'sys_maint_bypass') proc = PROC_SYSTEM_MAINT_BYPASS;
         else if (procId === 'module_iso') proc = PROC_MODULE_ISOLATION;
+        else if (procId === 'module1_pm') proc = PROC_MODULE_1_PM;
+        else if (procId === 'module1_restore') proc = PROC_MODULE_1_RESTORE;
+        else if (procId === 'utility_fail_test') proc = PROC_UTILITY_FAILURE_TEST;
         if (proc) {
             setActiveProcedure(proc);
             setStepIndex(0);
@@ -154,7 +157,7 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
             <div className="flex-1 flex flex-col p-0 h-full min-h-0 relative">
                 <div className="flex-none flex justify-between items-center bg-slate-900 border-b border-cyan-500/20 shadow-lg z-10 px-4 py-2 h-20">
                     <div className="flex flex-col justify-center cursor-pointer group" onClick={onReturnToMenu}>
-                        <h1 className="text-xl font-black italic text-slate-100 tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">OMNI<span className="text-cyan-500">POWER</span> <span className="text-sm font-normal text-slate-400">PARALLEL</span></h1>
+                        <h1 className="text-xl font-black italic text-slate-100 tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-500">UPS</span> <span className="text-sm font-normal text-slate-400">PARALLEL</span></h1>
                         <div className="text-[10px] text-slate-400 font-mono tracking-widest mt-1 group-hover:text-cyan-500 transition-colors">REDUNDANT ARCHITECTURE {onReturnToMenu && '· CLICK TO EXIT'}</div>
                     </div>
                     <div className="h-full flex-1 mx-4">
@@ -171,7 +174,7 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                         onComponentClick={setSelectedComp}
                     />
                 </div>
-                <div className="flex-none h-40 flex gap-0 border-t border-slate-800">
+                <div className="flex-none h-64 flex gap-0 border-t border-slate-800">
                     <div className="w-1/2 h-full border-r border-slate-800">
                         <ParallelWaveforms state={state} />
                     </div>

@@ -44,7 +44,7 @@ const Launcher = () => {
         );
     }
 
-    if (mode === 'SINGLE') return <div className="relative animate-fade-in"><button onClick={() => setMode('SELECT')} className="absolute top-5 left-[340px] z-50 px-4 py-1.5 bg-slate-800/80 backdrop-blur text-[10px] font-bold text-slate-400 border border-slate-600 rounded hover:text-white hover:border-cyan-500 transition-all">← RETURN TO MENU</button><App /></div>;
+    if (mode === 'SINGLE') return <App onReturnToMenu={() => setMode('SELECT')} />;
     if (mode === 'PARALLEL') return <ParallelApp onReturnToMenu={() => setMode('SELECT')} />;
 
     return (
@@ -62,7 +62,10 @@ const Launcher = () => {
 
                 {/* Header */}
                 <div className="col-span-2 text-center mb-8">
-                    <h1 className="text-6xl font-black text-white italic tracking-tighter drop-shadow-2xl">OMNI<span className="text-cyan-500">POWER</span></h1>
+                    <div className="text-6xl font-black text-white italic tracking-tighter drop-shadow-2xl cursor-pointer group" onClick={() => {/* Could add home functionality */ }}>
+                        SafeOps <span className="text-cyan-500">UPS</span>
+                        <div className="text-[8px] text-slate-500 tracking-widest uppercase mt-0.5">Digital Twin Platform</div>
+                    </div>
                     <div className="flex items-center justify-center gap-4 mt-4">
                         <div className="h-px w-12 bg-slate-800"></div>
                         <p className="text-slate-500 font-mono tracking-[0.3em] text-xs">DIGITAL TWIN SIMULATION SUITE</p>

@@ -1,13 +1,16 @@
 
+
 export enum ParallelBreakerId {
     // Module 1
     Q1_1 = 'Q1_1', // Rectifier Input 1
+    Q2_1 = 'Q2_1', // Bypass Input 1
     Q3_1 = 'Q3_1', // Maintenance Bypass 1
     Q4_1 = 'Q4_1', // Output Switch 1
     QF1_1 = 'QF1_1', // Battery Breaker 1
 
     // Module 2
     Q1_2 = 'Q1_2', // Rectifier Input 2
+    Q2_2 = 'Q2_2', // Bypass Input 2
     Q3_2 = 'Q3_2', // Maintenance Bypass 2
     Q4_2 = 'Q4_2', // Output Switch 2
     QF1_2 = 'QF1_2', // Battery Breaker 2
@@ -16,6 +19,7 @@ export enum ParallelBreakerId {
     Load1 = 'Load1',
     Load2 = 'Load2'
 }
+
 
 export enum ComponentStatus {
     OFF = 'OFF',
@@ -82,9 +86,10 @@ export interface ParallelProcedureStep {
     id: number;
     description: string;
     expectedAction?: {
-        type: 'BREAKER' | 'SWITCH' | 'WAIT';
+        type: 'BREAKER' | 'SWITCH' | 'WAIT' | 'COMPONENT';
         target: string; // e.g., 'module1.rectifier' or 'Q1_1'
-        value: any;
+        value?: any;
+        action?: string; // e.g., 'START', 'STOP' for component actions
     };
     validationFn: (state: ParallelSimulationState) => boolean;
     hint?: string;
