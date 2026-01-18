@@ -291,7 +291,6 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
 
                     <div className="flex flex-col gap-2">
                         <button onClick={() => startProcedure('')} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600 text-xs font-bold text-slate-300 transition-colors">RESET SIM</button>
-                        <button onClick={() => setShowAchievements(true)} className="px-3 py-1 bg-slate-800 hover:bg-amber-900 rounded border border-slate-600 hover:border-amber-500 text-xs font-bold text-slate-300 hover:text-amber-400 transition-colors">🏆 ACHIEVEMENTS</button>
                         <button onClick={restartTutorial} className="px-3 py-1 bg-slate-800 hover:bg-blue-900 rounded border border-slate-600 hover:border-blue-500 text-xs font-bold text-slate-300 hover:text-blue-400 transition-colors">? HELP</button>
                         <button onClick={() => setShowInstructor(!showInstructor)} className={`px-3 py-1 rounded border text-xs font-bold transition-colors ${showInstructor ? 'bg-red-900 border-red-500 text-white' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>INSTRUCTOR</button>
                     </div>
@@ -312,6 +311,10 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
 
                 {/* MAIN SLD VIEW */}
                 <div className="flex-1 min-h-0 relative bg-slate-900 overflow-hidden border-t border-slate-800">
+                    {/* Interactive SLD Hint Banner - Bottom left corner to avoid covering components */}
+                    <div className="absolute bottom-2 left-2 z-30 bg-slate-800/90 px-3 py-1 rounded border border-cyan-500/40 shadow-lg">
+                        <span className="text-cyan-400 text-[10px] font-bold">💡 Click switches to toggle • Click components for faceplate</span>
+                    </div>
                     <SLD
                         state={state}
                         onBreakerToggle={toggleBreaker}

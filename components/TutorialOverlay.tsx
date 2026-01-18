@@ -16,8 +16,8 @@ const TUTORIAL_STEPS: TutorialStep[] = [
         position: 'center'
     },
     {
-        title: 'Single Line Diagram (SLD)',
-        content: 'This is your primary view - a schematic representation of the UPS system. Click on any component to open its faceplate and control it. Breakers can be toggled by clicking them directly.',
+        title: '🖱️ Interactive Single Line Diagram (SLD)',
+        content: 'The SLD is FULLY INTERACTIVE! • Click any BREAKER (Q1, Q2, Q3, Q4) to toggle it OPEN/CLOSED • Click on RECT, INV, or STS boxes to open faceplate controls • You can START/STOP components and transfer the static switch directly from the diagram!',
         target: '.sld-container',
         position: 'right'
     },

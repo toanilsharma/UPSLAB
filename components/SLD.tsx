@@ -86,32 +86,32 @@ const Transformer = ({ x, y }: { x: number, y: number }) => (
 
 const Breaker = ({ id, x, y, isOpen, onClick, label, vertical = false, isEnergized = false, isWarning = false }: any) => {
     const bodyColor = isOpen ? '#ef4444' : (isWarning ? '#f97316' : '#22c55e');
-    const glow = isOpen ? '' : (isEnergized ? 'filter drop-shadow(0 0 6px currentColor)' : '');
-    const labelY = vertical ? 0 : -25;
-    const labelX = vertical ? 30 : 0;
+    const glow = isOpen ? '' : (isEnergized ? 'filter drop-shadow(0 0 8px currentColor)' : '');
+    const labelY = vertical ? 0 : -30;
+    const labelX = vertical ? 40 : 0;
 
     return (
         <g transform={`translate(${x}, ${y})`} className="cursor-pointer group" onClick={onClick}>
             {/* Hitbox */}
-            <rect x={-30} y={-35} width={60} height={70} fill="transparent" />
+            <rect x={-40} y={-45} width={80} height={90} fill="transparent" />
 
             {/* Interaction Cue */}
-            <rect x={-20} y={-20} width={40} height={40} rx="4" className="stroke-white stroke-2 fill-none opacity-0 group-hover:opacity-30 transition-opacity" strokeDasharray="4,4" />
+            <rect x={-28} y={-28} width={56} height={56} rx="6" className="stroke-white stroke-2 fill-none opacity-0 group-hover:opacity-30 transition-opacity" strokeDasharray="4,4" />
 
             {/* Label */}
-            <text x={labelX} y={labelY} textAnchor={vertical ? "start" : "middle"} className="fill-slate-300 text-[14px] font-mono font-bold tracking-wider group-hover:fill-white transition-colors shadow-black drop-shadow-md">{label}</text>
+            <text x={labelX} y={labelY} textAnchor={vertical ? "start" : "middle"} className="fill-slate-200 text-[18px] font-sans font-extrabold tracking-wide group-hover:fill-white transition-colors" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>{label}</text>
 
-            {/* Switch Housing */}
-            <rect x={-10} y={-10} width={20} height={20} rx="3" className="fill-slate-800 stroke-slate-500 stroke-2" />
+            {/* Switch Housing - Larger */}
+            <rect x={-14} y={-14} width={28} height={28} rx="4" className="fill-slate-800 stroke-slate-400 stroke-[3px]" />
 
             {vertical ? (
                 isOpen ?
-                    <path d="M0,-30 L0,-10 M0,10 L0,30 M-8,-6 L15,12" stroke={bodyColor} strokeWidth="5" strokeLinecap="round" className="transition-all duration-300" /> :
-                    <path d="M0,-30 L0,30" stroke={bodyColor} strokeWidth="5" strokeLinecap="round" className={`transition-all duration-300 ${glow}`} />
+                    <path d="M0,-40 L0,-14 M0,14 L0,40 M-10,-8 L20,16" stroke={bodyColor} strokeWidth="6" strokeLinecap="round" className="transition-all duration-300" /> :
+                    <path d="M0,-40 L0,40" stroke={bodyColor} strokeWidth="6" strokeLinecap="round" className={`transition-all duration-300 ${glow}`} />
             ) : (
                 isOpen ?
-                    <path d="M-30,0 L-10,0 M10,0 L30,0 M-6,8 L12,-15" stroke={bodyColor} strokeWidth="5" strokeLinecap="round" className="transition-all duration-300" /> :
-                    <path d="M-30,0 L30,0" stroke={bodyColor} strokeWidth="5" strokeLinecap="round" className={`transition-all duration-300 ${glow}`} />
+                    <path d="M-40,0 L-14,0 M14,0 L40,0 M-8,10 L16,-20" stroke={bodyColor} strokeWidth="6" strokeLinecap="round" className="transition-all duration-300" /> :
+                    <path d="M-40,0 L40,0" stroke={bodyColor} strokeWidth="6" strokeLinecap="round" className={`transition-all duration-300 ${glow}`} />
             )}
         </g>
     );

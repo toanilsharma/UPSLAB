@@ -36,14 +36,147 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
         setLogs(prev => [entry, ...prev].slice(0, 100));
     };
 
+    // Track previous state for event detection
+    const prevStateRef = useRef<ParallelSimulationState | null>(null);
+
+    // Comprehensive event monitoring system
+    const monitorEvents = useCallback((prevState: ParallelSimulationState | null, newState: ParallelSimulationState) => {
+        if (!prevState) return;
+
+        const { modules: prevMod, breakers: prevBrk, voltages: prevVolt } = prevState;
+        const { modules: newMod, breakers: newBrk, voltages: newVolt } = newState;
+
+        // --- MODULE 1 EVENTS ---
+        // Battery discharge detection
+        if (newMod.module1.battery.current < -5 && prevMod.module1.battery.current >= -5) {
+            addLog('MODULE 1: Load transferred to BATTERY backup', 'ALARM');
+        }
+        if (newMod.module1.battery.current >= 0 && prevMod.module1.battery.current < -5) {
+            addLog('MODULE 1: Battery backup ended, AC power restored', 'INFO');
+        }
+
+        // STS mode changes
+        if (newMod.module1.staticSwitch.mode === 'BYPASS' && prevMod.module1.staticSwitch.mode === 'INVERTER') {
+            addLog('MODULE 1: STS transferred to BYPASS mode', 'ALARM');
+        }
+        if (newMod.module1.staticSwitch.mode === 'INVERTER' && prevMod.module1.staticSwitch.mode === 'BYPASS') {
+            addLog('MODULE 1: STS transferred to INVERTER mode', 'INFO');
+        }
+
+        // Rectifier status
+        if (newMod.module1.rectifier.status === ComponentStatus.OFF && prevMod.module1.rectifier.status === ComponentStatus.NORMAL) {
+            addLog('MODULE 1: Rectifier OFFLINE - Running on battery/standby', 'ALARM');
+        }
+        if (newMod.module1.rectifier.status === ComponentStatus.NORMAL && prevMod.module1.rectifier.status !== ComponentStatus.NORMAL) {
+            addLog('MODULE 1: Rectifier ONLINE and charging', 'INFO');
+        }
+
+        // Inverter status
+        if (newMod.module1.inverter.status === ComponentStatus.OFF && prevMod.module1.inverter.status === ComponentStatus.NORMAL) {
+            addLog('MODULE 1: Inverter STOPPED - Module in standby', 'ALARM');
+        }
+        if (newMod.module1.inverter.status === ComponentStatus.NORMAL && prevMod.module1.inverter.status === ComponentStatus.STARTING) {
+            addLog('MODULE 1: Inverter synchronized and ON-LINE', 'INFO');
+        }
+
+        // --- MODULE 2 EVENTS ---
+        if (newMod.module2.battery.current < -5 && prevMod.module2.battery.current >= -5) {
+            addLog('MODULE 2: Load transferred to BATTERY backup', 'ALARM');
+        }
+        if (newMod.module2.battery.current >= 0 && prevMod.module2.battery.current < -5) {
+            addLog('MODULE 2: Battery backup ended, AC power restored', 'INFO');
+        }
+
+        if (newMod.module2.staticSwitch.mode === 'BYPASS' && prevMod.module2.staticSwitch.mode === 'INVERTER') {
+            addLog('MODULE 2: STS transferred to BYPASS mode', 'ALARM');
+        }
+        if (newMod.module2.staticSwitch.mode === 'INVERTER' && prevMod.module2.staticSwitch.mode === 'BYPASS') {
+            addLog('MODULE 2: STS transferred to INVERTER mode', 'INFO');
+        }
+
+        if (newMod.module2.rectifier.status === ComponentStatus.OFF && prevMod.module2.rectifier.status === ComponentStatus.NORMAL) {
+            addLog('MODULE 2: Rectifier OFFLINE - Running on battery/standby', 'ALARM');
+        }
+        if (newMod.module2.rectifier.status === ComponentStatus.NORMAL && prevMod.module2.rectifier.status !== ComponentStatus.NORMAL) {
+            addLog('MODULE 2: Rectifier ONLINE and charging', 'INFO');
+        }
+
+        if (newMod.module2.inverter.status === ComponentStatus.OFF && prevMod.module2.inverter.status === ComponentStatus.NORMAL) {
+            addLog('MODULE 2: Inverter STOPPED - Module in standby', 'ALARM');
+        }
+        if (newMod.module2.inverter.status === ComponentStatus.NORMAL && prevMod.module2.inverter.status === ComponentStatus.STARTING) {
+            addLog('MODULE 2: Inverter synchronized and ON-LINE', 'INFO');
+        }
+
+        // --- SYSTEM-WIDE EVENTS ---
+        // Utility power
+        if (newVolt.utilityInput < 100 && prevVolt.utilityInput >= 350) {
+            addLog('SYSTEM: UTILITY POWER FAILURE - Transferring to battery', 'ALARM');
+        }
+        if (newVolt.utilityInput >= 350 && prevVolt.utilityInput < 100) {
+            addLog('SYSTEM: Utility power RESTORED', 'INFO');
+        }
+
+        // Load bus
+        if (newVolt.loadBus < 100 && prevVolt.loadBus >= 350) {
+            addLog('CRITICAL: Load bus voltage LOST - Critical load offline!', 'ALARM');
+        }
+        if (newVolt.loadBus >= 350 && prevVolt.loadBus < 100) {
+            addLog('SYSTEM: Load bus energized - Critical load protected', 'INFO');
+        }
+
+        // Load sharing mode detection
+        const m1Active = newMod.module1.inverter.status === ComponentStatus.NORMAL && newBrk[ParallelBreakerId.Q4_1];
+        const m2Active = newMod.module2.inverter.status === ComponentStatus.NORMAL && newBrk[ParallelBreakerId.Q4_2];
+        const pm1Active = prevMod.module1.inverter.status === ComponentStatus.NORMAL && prevBrk[ParallelBreakerId.Q4_1];
+        const pm2Active = prevMod.module2.inverter.status === ComponentStatus.NORMAL && prevBrk[ParallelBreakerId.Q4_2];
+
+        if (m1Active && m2Active && (!pm1Active || !pm2Active)) {
+            addLog('SYSTEM: Both modules ON-LINE - Load sharing 50%/50%', 'INFO');
+        }
+        if (m1Active && !m2Active && pm1Active && pm2Active) {
+            addLog('SYSTEM: Module 2 OFFLINE - Module 1 carrying 100% load', 'ALARM');
+        }
+        if (!m1Active && m2Active && pm1Active && pm2Active) {
+            addLog('SYSTEM: Module 1 OFFLINE - Module 2 carrying 100% load', 'ALARM');
+        }
+
+        // Maintenance bypass
+        if (newBrk[ParallelBreakerId.Q3_1] && !prevBrk[ParallelBreakerId.Q3_1]) {
+            addLog('MODULE 1: Maintenance bypass ENGAGED - UPS bypassed', 'ALARM');
+        }
+        if (!newBrk[ParallelBreakerId.Q3_1] && prevBrk[ParallelBreakerId.Q3_1]) {
+            addLog('MODULE 1: Maintenance bypass DISENGAGED', 'INFO');
+        }
+        if (newBrk[ParallelBreakerId.Q3_2] && !prevBrk[ParallelBreakerId.Q3_2]) {
+            addLog('MODULE 2: Maintenance bypass ENGAGED - UPS bypassed', 'ALARM');
+        }
+        if (!newBrk[ParallelBreakerId.Q3_2] && prevBrk[ParallelBreakerId.Q3_2]) {
+            addLog('MODULE 2: Maintenance bypass DISENGAGED', 'INFO');
+        }
+
+        // Battery low warnings
+        if (newMod.module1.battery.chargeLevel < 20 && prevMod.module1.battery.chargeLevel >= 20) {
+            addLog('MODULE 1: BATTERY LOW WARNING (<20%)', 'ALARM');
+        }
+        if (newMod.module2.battery.chargeLevel < 20 && prevMod.module2.battery.chargeLevel >= 20) {
+            addLog('MODULE 2: BATTERY LOW WARNING (<20%)', 'ALARM');
+        }
+    }, []);
+
     useEffect(() => {
         if (!booted) return;
         const interval = setInterval(() => {
             if (failReason) return;
-            setState(prev => calculateParallelPowerFlow(prev));
+            setState(prev => {
+                const newState = calculateParallelPowerFlow(prev);
+                monitorEvents(prevStateRef.current, newState);
+                prevStateRef.current = JSON.parse(JSON.stringify(newState));
+                return newState;
+            });
         }, 200);
         return () => clearInterval(interval);
-    }, [failReason, booted]);
+    }, [failReason, booted, monitorEvents]);
 
     const toggleBreaker = useCallback((id: string) => {
         if (failReason) return;
@@ -176,26 +309,33 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                 </div>
             )}
             <div className="flex-1 flex flex-col p-0 h-full min-h-0 relative">
-                <div className="flex-none flex justify-between items-center bg-slate-900 border-b border-cyan-500/20 shadow-lg z-10 px-4 py-2 h-20">
-                    <div className="flex flex-col justify-center cursor-pointer group" onClick={onReturnToMenu}>
-                        <h1 className="text-xl font-black italic text-slate-100 tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-500">UPS</span> <span className="text-sm font-normal text-slate-400">PARALLEL</span></h1>
-                        <div className="text-[10px] text-slate-400 font-mono tracking-widest mt-1 group-hover:text-cyan-500 transition-colors">REDUNDANT ARCHITECTURE {onReturnToMenu && '· CLICK TO EXIT'}</div>
+                <div className="flex-none flex justify-between items-center bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b-2 border-cyan-500/30 shadow-2xl shadow-cyan-500/10 z-10 px-4 py-2 h-20 relative overflow-hidden">
+                    {/* Subtle animated glow effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent opacity-50"></div>
+                    <div className="flex flex-col justify-center cursor-pointer group relative z-10" onClick={onReturnToMenu}>
+                        <h1 className="text-2xl font-black italic text-white tracking-tighter leading-none group-hover:text-cyan-400 transition-colors drop-shadow-[0_2px_8px_rgba(6,182,212,0.3)]">SafeOps <span className="text-cyan-400">UPS</span> <span className="text-base font-normal text-slate-300">PARALLEL</span></h1>
+                        <div className="text-[11px] text-cyan-300/70 font-mono tracking-widest mt-1 group-hover:text-cyan-400 transition-colors">REDUNDANT ARCHITECTURE {onReturnToMenu && '· CLICK TO EXIT'}</div>
                     </div>
                     <div className="h-full flex-1 mx-4">
                         <ParallelDashboard state={state} />
                     </div>
-                    <div className="flex flex-col gap-2">
-                        <button onClick={() => startProcedure('')} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600 text-xs font-bold text-slate-300 transition-colors">RESET SIM</button>
+                    <div className="flex flex-col gap-2 relative z-10">
+                        <button onClick={() => startProcedure('')} className="px-4 py-1.5 bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 rounded-lg border border-cyan-500/30 hover:border-cyan-400/50 text-xs font-bold text-cyan-300 hover:text-cyan-200 transition-all shadow-lg hover:shadow-cyan-500/20">RESET SIM</button>
+                        <button onClick={() => alert('💡 INTERACTIVE SLD GUIDE\\n\\n• BREAKERS: Click any breaker (Q1, Q2, Q3, Q4, CB-L1, CB-L2) to toggle it OPEN/CLOSED\\n\\n• COMPONENTS: Click on RECT, INV, or STS boxes to open the faceplate control panel\\n\\n• FACEPLATE: From the faceplate, you can START/STOP components or transfer the STS\\n\\n• LOADS: Click on CRITICAL-A or CRITICAL-B to view load status\\n\\n• EVENT LOG: Watch the event log for real-time system events\\n\\n• SOPs: Follow Standard Operating Procedures on the right panel for guided training')} className="px-4 py-1.5 bg-gradient-to-br from-blue-800 to-blue-900 hover:from-blue-700 hover:to-blue-800 rounded-lg border border-blue-500/30 hover:border-blue-400/50 text-xs font-bold text-blue-300 hover:text-blue-200 transition-all shadow-lg hover:shadow-blue-500/20">? HELP</button>
                     </div>
                 </div>
                 <div className="flex-1 min-h-0 relative bg-slate-900 overflow-hidden border-t border-slate-800">
+                    {/* Interactive SLD Hint Banner - Bottom left corner to avoid covering components */}
+                    <div className="absolute bottom-2 left-2 z-30 bg-slate-800/90 px-3 py-1 rounded border border-cyan-500/40 shadow-lg">
+                        <span className="text-cyan-400 text-[10px] font-bold">💡 Click switches to toggle • Click components for faceplate</span>
+                    </div>
                     <ParallelSLD
                         state={state}
                         onBreakerToggle={toggleBreaker}
                         onComponentClick={setSelectedComp}
                     />
                 </div>
-                <div className="flex-none h-64 flex gap-0 border-t border-slate-800">
+                <div className="flex-none h-48 flex gap-0 border-t-2 border-cyan-500/20 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
                     <div className="w-1/2 h-full border-r border-slate-800">
                         <ParallelWaveforms state={state} />
                     </div>

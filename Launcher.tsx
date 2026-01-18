@@ -23,7 +23,7 @@ const Launcher = () => {
                         transition={{ duration: 1, type: "spring" }}
                         className="text-6xl font-black text-white italic tracking-tighter mb-4"
                     >
-                        OMNI<span className="text-cyan-500">POWER</span>
+                        SafeOps <span className="text-cyan-500">UPS</span>
                     </motion.div>
                     <motion.div
                         initial={{ width: 0 }}

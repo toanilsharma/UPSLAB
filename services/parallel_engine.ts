@@ -317,18 +317,72 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
     s.modules.module2.battery.temp = Math.max(AMBIENT_TEMP, s.modules.module2.battery.temp + batt2Heat - ((s.modules.module2.battery.temp - AMBIENT_TEMP) * 0.05));
 
     // --- ALARMS ---
+    // Clear alarms array first and rebuild based on current state
+    s.alarms = [];
+
+    // Utility power alarms
     if (!utilityLive) s.alarms.push('UTILITY FAILURE');
+
+    // Battery alarms
     if (s.modules.module1.battery.chargeLevel < 20) s.alarms.push('M1 BATTERY LOW');
     if (s.modules.module2.battery.chargeLevel < 20) s.alarms.push('M2 BATTERY LOW');
+    if (s.modules.module1.battery.current < -10) s.alarms.push('M1 ON BATTERY');
+    if (s.modules.module2.battery.current < -10) s.alarms.push('M2 ON BATTERY');
+
+    // Temperature alarms  
     if (s.modules.module1.rectifier.temperature > 85) s.alarms.push('M1 RECTIFIER OVERTEMP');
     if (s.modules.module2.rectifier.temperature > 85) s.alarms.push('M2 RECTIFIER OVERTEMP');
     if (s.modules.module1.inverter.temperature > 85) s.alarms.push('M1 INVERTER OVERTEMP');
     if (s.modules.module2.inverter.temperature > 85) s.alarms.push('M2 INVERTER OVERTEMP');
+
+    // Component fault alarms
     if (s.modules.module1.rectifier.status === ComponentStatus.FAULT) s.alarms.push('M1 RECTIFIER FAULT');
     if (s.modules.module2.rectifier.status === ComponentStatus.FAULT) s.alarms.push('M2 RECTIFIER FAULT');
     if (s.modules.module1.inverter.status === ComponentStatus.FAULT) s.alarms.push('M1 INVERTER FAULT');
     if (s.modules.module2.inverter.status === ComponentStatus.FAULT) s.alarms.push('M2 INVERTER FAULT');
-    if (s.voltages.loadBus < 100 && (s.breakers[ParallelBreakerId.Load1] || s.breakers[ParallelBreakerId.Load2])) s.alarms.push('CRITICAL LOAD LOSS');
+
+    // Load bus alarm
+    if (s.voltages.loadBus < 100 && (s.breakers[ParallelBreakerId.Load1] || s.breakers[ParallelBreakerId.Load2])) {
+        s.alarms.push('CRITICAL LOAD LOSS');
+    }
+
+    // --- STANDBY MODE DETECTION ---
+    // Module 1 standby conditions
+    const m1InputOff = !s.breakers[ParallelBreakerId.Q1_1];
+    const m1RectOff = s.modules.module1.rectifier.status === ComponentStatus.OFF;
+    const m1InvOff = s.modules.module1.inverter.status === ComponentStatus.OFF;
+
+    if (m1InputOff || m1RectOff) {
+        if (m1InputOff) s.alarms.push('M1 INPUT BREAKER OPEN');
+        if (m1RectOff && !m1InputOff) s.alarms.push('M1 RECTIFIER OFF');
+        if (m1InvOff) s.alarms.push('M1 STANDBY');
+    }
+
+    // Module 2 standby conditions
+    const m2InputOff = !s.breakers[ParallelBreakerId.Q1_2];
+    const m2RectOff = s.modules.module2.rectifier.status === ComponentStatus.OFF;
+    const m2InvOff = s.modules.module2.inverter.status === ComponentStatus.OFF;
+
+    if (m2InputOff || m2RectOff) {
+        if (m2InputOff) s.alarms.push('M2 INPUT BREAKER OPEN');
+        if (m2RectOff && !m2InputOff) s.alarms.push('M2 RECTIFIER OFF');
+        if (m2InvOff) s.alarms.push('M2 STANDBY');
+    }
+
+    // Bypass mode alarms
+    if (s.modules.module1.staticSwitch.mode === 'BYPASS') s.alarms.push('M1 ON BYPASS');
+    if (s.modules.module2.staticSwitch.mode === 'BYPASS') s.alarms.push('M2 ON BYPASS');
+
+    // Redundancy check
+    const m1Operating = s.modules.module1.inverter.status === ComponentStatus.NORMAL && s.breakers[ParallelBreakerId.Q4_1];
+    const m2Operating = s.modules.module2.inverter.status === ComponentStatus.NORMAL && s.breakers[ParallelBreakerId.Q4_2];
+
+    if ((m1Operating && !m2Operating) || (!m1Operating && m2Operating)) {
+        s.alarms.push('REDUNDANCY LOST - SINGLE MODULE');
+    }
+    if (!m1Operating && !m2Operating && s.voltages.loadBus > 50) {
+        s.alarms.push('SYSTEM ON BYPASS - NO INVERTER');
+    }
 
     return s;
 };
