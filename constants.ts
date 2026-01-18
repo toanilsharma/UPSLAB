@@ -60,6 +60,11 @@ export const INITIAL_STATE: SimulationState = {
     },
   },
   alarms: [],
+  faults: {
+    dcLinkCapacitorFailure: false,
+    groundFault: false,
+    syncDrift: false,
+  },
   lastTick: 0,
 };
 

@@ -257,30 +257,21 @@ function getPositionStyles(position: string): React.CSSProperties {
     }
 }
 
-// Hook to manage tutorial state
+// Hook to manage tutorial state - HELP IS NOW USER-CHOICE ONLY
 export function useTutorial() {
     const [showTutorial, setShowTutorial] = useState(false);
 
-    useEffect(() => {
-        const hasSeenTutorial = localStorage.getItem('ups_tutorial_completed');
-        if (!hasSeenTutorial) {
-            // Show tutorial after a short delay for first-time users
-            const timer = setTimeout(() => setShowTutorial(true), 1000);
-            return () => clearTimeout(timer);
-        }
-    }, []);
+    // REMOVED: No auto-show on first visit - help is now user-initiated only
 
     const completeTutorial = () => {
-        localStorage.setItem('ups_tutorial_completed', 'true');
         setShowTutorial(false);
     };
 
     const skipTutorial = () => {
-        localStorage.setItem('ups_tutorial_completed', 'true');
         setShowTutorial(false);
     };
 
-    const restartTutorial = () => {
+    const showHelp = () => {
         setShowTutorial(true);
     };
 
@@ -288,6 +279,6 @@ export function useTutorial() {
         showTutorial,
         completeTutorial,
         skipTutorial,
-        restartTutorial
+        showHelp
     };
 }

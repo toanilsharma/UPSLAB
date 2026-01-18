@@ -66,6 +66,12 @@ export interface SimulationState {
     };
   };
   alarms: string[];
+  // Fault injection states (IEC 62040-3 / IEEE 142)
+  faults: {
+    dcLinkCapacitorFailure: boolean;  // IEC 62040-3: DC bus ripple/instability
+    groundFault: boolean;             // IEEE 142: Ground fault detection
+    syncDrift: boolean;               // IEC 62040-3: Frequency out of VFI tolerance
+  };
   // timestamp for physics delta calculations
   lastTick: number;
 }

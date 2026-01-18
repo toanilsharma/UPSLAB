@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SLD } from './components/SLD';
 import { Waveforms } from './components/Waveforms';
@@ -7,6 +6,7 @@ import { Faceplate } from './components/Faceplate';
 import { Dashboard } from './components/Dashboard';
 import { TutorialOverlay, useTutorial } from './components/TutorialOverlay';
 import { AchievementPanel, AchievementToast } from './components/AchievementPanel';
+import { QuickReferenceCard } from './components/QuickReferenceCard';
 import { INITIAL_STATE, PROC_MAINT_BYPASS, PROC_RETURN_FROM_BYPASS, PROC_BLACK_START, PROC_COLD_START, PROC_EMERGENCY, PROC_FAILURE_RECOVERY } from './constants';
 import { calculatePowerFlow, checkInterlock } from './services/engine';
 import { SimulationState, BreakerId, Procedure, ComponentStatus, LogEntry } from './types';
@@ -30,9 +30,10 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
     const [procedureStartTime, setProcedureStartTime] = useState<number>(0);
 
     // NEW FEATURES
-    const { showTutorial, completeTutorial, skipTutorial, restartTutorial } = useTutorial();
+    const { showTutorial, completeTutorial, skipTutorial, showHelp } = useTutorial();
     const [showAchievements, setShowAchievements] = useState(false);
     const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
+    const [showQuickRef, setShowQuickRef] = useState(false);
 
     // FACEPLATE STATE
     const [selectedComp, setSelectedComp] = useState<string | null>(null);
@@ -166,6 +167,10 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
             if (type === 'RECTIFIER_FAULT') next.components.rectifier.status = ComponentStatus.FAULT;
             if (type === 'INVERTER_FAULT') next.components.inverter.status = ComponentStatus.FAULT;
             if (type === 'BATTERY_DRAIN') next.battery.chargeLevel = 10;
+            // IEC 62040-3 / IEEE 142 Compliant Faults
+            if (type === 'DC_CAPACITOR_FAIL') next.faults.dcLinkCapacitorFailure = !next.faults.dcLinkCapacitorFailure;
+            if (type === 'GROUND_FAULT') next.faults.groundFault = !next.faults.groundFault;
+            if (type === 'SYNC_DRIFT') next.faults.syncDrift = !next.faults.syncDrift;
             return calculatePowerFlow(next);
         });
     };
@@ -275,6 +280,13 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
                 onDismiss={() => setNewAchievement(null)}
             />
 
+            {/* QUICK REFERENCE CARD (IEC 62040-3 / IEEE 142) */}
+            <QuickReferenceCard
+                visible={showQuickRef}
+                onClose={() => setShowQuickRef(false)}
+                state={state}
+            />
+
             {/* LEFT COLUMN: SIMULATION */}
             <div className="flex-1 flex flex-col p-0 h-full min-h-0 relative">
 
@@ -291,20 +303,36 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
 
                     <div className="flex flex-col gap-2">
                         <button onClick={() => startProcedure('')} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600 text-xs font-bold text-slate-300 transition-colors">RESET SIM</button>
-                        <button onClick={restartTutorial} className="px-3 py-1 bg-slate-800 hover:bg-blue-900 rounded border border-slate-600 hover:border-blue-500 text-xs font-bold text-slate-300 hover:text-blue-400 transition-colors">? HELP</button>
+                        <button onClick={() => setShowQuickRef(!showQuickRef)} className={`px-3 py-1 rounded border text-xs font-bold transition-colors ${showQuickRef ? 'bg-cyan-900 border-cyan-500 text-cyan-200' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-cyan-900 hover:border-cyan-500'}`}>📋 REF</button>
+                        <button onClick={showHelp} className="px-3 py-1 bg-slate-800 hover:bg-blue-900 rounded border border-slate-600 hover:border-blue-500 text-xs font-bold text-slate-300 hover:text-blue-400 transition-colors">? HELP</button>
                         <button onClick={() => setShowInstructor(!showInstructor)} className={`px-3 py-1 rounded border text-xs font-bold transition-colors ${showInstructor ? 'bg-red-900 border-red-500 text-white' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>INSTRUCTOR</button>
                     </div>
                 </div>
 
                 {/* Instructor Panel */}
                 {showInstructor && (
-                    <div className="absolute top-24 right-4 z-40 bg-slate-900 border border-red-600/50 p-4 rounded shadow-2xl w-64 backdrop-blur-md">
+                    <div className="absolute top-24 right-4 z-40 bg-slate-900 border border-red-600/50 p-4 rounded shadow-2xl w-72 backdrop-blur-md">
                         <h3 className="text-red-400 font-bold mb-2 text-xs uppercase tracking-wider">Failure Injection</h3>
                         <div className="space-y-2">
                             <button onClick={() => injectFault('UTILITY_LOSS')} className="w-full text-left text-xs p-2 bg-slate-800 hover:bg-red-900/50 rounded border border-slate-700">Trip Mains Input</button>
                             <button onClick={() => injectFault('RECTIFIER_FAULT')} className="w-full text-left text-xs p-2 bg-slate-800 hover:bg-red-900/50 rounded border border-slate-700">Fail Rectifier IGBTs</button>
                             <button onClick={() => injectFault('INVERTER_FAULT')} className="w-full text-left text-xs p-2 bg-slate-800 hover:bg-red-900/50 rounded border border-slate-700">Fail Inverter Module</button>
                             <button onClick={() => injectFault('BATTERY_DRAIN')} className="w-full text-left text-xs p-2 bg-slate-800 hover:bg-red-900/50 rounded border border-slate-700">Simulate Battery Failure</button>
+                        </div>
+                        <h3 className="text-orange-400 font-bold mt-4 mb-2 text-xs uppercase tracking-wider">IEC/IEEE Faults</h3>
+                        <div className="space-y-2">
+                            <button onClick={() => injectFault('DC_CAPACITOR_FAIL')} className={`w-full text-left text-xs p-2 rounded border ${state.faults.dcLinkCapacitorFailure ? 'bg-orange-900 border-orange-500 text-orange-200' : 'bg-slate-800 hover:bg-orange-900/50 border-slate-700'}`}>
+                                DC Link Capacitor Fail {state.faults.dcLinkCapacitorFailure && '✓'}
+                                <div className="text-[9px] text-slate-400 mt-0.5">IEC 62040-3 §6.4</div>
+                            </button>
+                            <button onClick={() => injectFault('GROUND_FAULT')} className={`w-full text-left text-xs p-2 rounded border ${state.faults.groundFault ? 'bg-orange-900 border-orange-500 text-orange-200' : 'bg-slate-800 hover:bg-orange-900/50 border-slate-700'}`}>
+                                Ground Fault {state.faults.groundFault && '✓'}
+                                <div className="text-[9px] text-slate-400 mt-0.5">IEEE 142 (HRG)</div>
+                            </button>
+                            <button onClick={() => injectFault('SYNC_DRIFT')} className={`w-full text-left text-xs p-2 rounded border ${state.faults.syncDrift ? 'bg-orange-900 border-orange-500 text-orange-200' : 'bg-slate-800 hover:bg-orange-900/50 border-slate-700'}`}>
+                                Sync Drift {state.faults.syncDrift && '✓'}
+                                <div className="text-[9px] text-slate-400 mt-0.5">IEC 62040-3 §5.3.4</div>
+                            </button>
                         </div>
                     </div>
                 )}

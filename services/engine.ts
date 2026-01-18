@@ -69,6 +69,7 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
             staticSwitch: { ...prevState.components.staticSwitch }
         },
         alarms: [],
+        faults: { ...prevState.faults },
         lastTick: now
     };
 
@@ -158,6 +159,15 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
 
     s.voltages.dcBus = busV;
 
+    // --- FAULT: DC LINK CAPACITOR FAILURE (IEC 62040-3 §6.4) ---
+    // Simulates capacitor ESR increase/failure causing 100Hz ripple (2× line frequency)
+    // Ripple amplitude increases, may cause inverter undervoltage during troughs
+    if (s.faults.dcLinkCapacitorFailure && s.voltages.dcBus > 0) {
+        // 100Hz ripple with ±50V amplitude (severe degradation)
+        const ripple100Hz = Math.sin((now / 1000) * 2 * Math.PI * 100) * 50;
+        s.voltages.dcBus = Math.max(0, s.voltages.dcBus + ripple100Hz);
+    }
+
     // --- 3. INVERTER PHYSICS ---
     if (s.components.inverter.status === ComponentStatus.FAULT) {
         s.components.inverter.voltageOut = 0;
@@ -177,6 +187,15 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
                 s.frequencies.inverter = 50.0 + (Math.sin(now / 5000) * 0.1);
             } else {
                 s.frequencies.inverter = 50.0;
+            }
+
+            // --- FAULT: SYNCHRONIZATION DRIFT (IEC 62040-3 §5.3.4) ---
+            // VFI tolerance is ±0.5% (49.75-50.25Hz). This fault causes PLL to lose lock.
+            // Inverter frequency drifts outside tolerance, blocking safe transfer.
+            if (s.faults.syncDrift) {
+                // Frequency oscillates between 48Hz and 52Hz (well outside ±0.5%)
+                const driftAmount = Math.sin(now / 3000) * 2.5; // ±2.5Hz drift
+                s.frequencies.inverter = 50.0 + driftAmount;
             }
         }
     } else {
@@ -211,7 +230,9 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     } else {
         // AUTO-RETRANSFER Logic
         // Only if: Inverter Good AND Sync Good AND Not Forced AND Sync Error Low
-        if (inverterReady && syncError < 5 && !s.components.staticSwitch.forceBypass) {
+        // Block if sync drift fault is active (IEC 62040-3 VFI tolerance violation)
+        const freqInTolerance = Math.abs(s.frequencies.inverter - 50.0) <= 0.25; // ±0.5%
+        if (inverterReady && syncError < 5 && !s.components.staticSwitch.forceBypass && freqInTolerance) {
             // Simulating a "Wait time" could go here, but instant for now
             s.components.staticSwitch.mode = 'INVERTER';
         }
@@ -332,6 +353,25 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     if (s.components.inverter.status === ComponentStatus.FAULT) s.alarms.push('INVERTER FAULT');
     if (s.voltages.loadBus < 100 && (b[BreakerId.Load1] || b[BreakerId.Load2])) s.alarms.push('CRITICAL LOAD LOSS');
     if (s.battery.temp > 45) s.alarms.push('BATTERY OVERTEMP');
+
+    // --- FAULT ALARMS (IEC 62040-3 / IEEE 142) ---
+    if (s.faults.dcLinkCapacitorFailure) {
+        s.alarms.push('DC LINK CAPACITOR ALARM');
+        // Check if ripple is causing undervoltage trips
+        if (s.voltages.dcBus < 350) {
+            s.alarms.push('DC BUS UNDERVOLTAGE');
+        }
+    }
+    if (s.faults.groundFault) {
+        // IEEE 142 High-Resistance Grounding: Alarm only, allows continued operation
+        s.alarms.push('GROUND FAULT DETECTED (IEEE 142)');
+    }
+    if (s.faults.syncDrift) {
+        const freqDeviation = Math.abs(s.frequencies.inverter - 50.0);
+        if (freqDeviation > 0.25) { // Outside VFI ±0.5% tolerance
+            s.alarms.push('SYNC ERROR - TRANSFER BLOCKED');
+        }
+    }
 
     return s;
 };
