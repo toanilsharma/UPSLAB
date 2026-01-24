@@ -7,7 +7,7 @@ import { ParallelFaceplate } from './components/ParallelFaceplate';
 import { ParallelDashboard } from './components/ParallelDashboard';
 import { INITIAL_PARALLEL_STATE, PROC_SYSTEM_MAINT_BYPASS, PROC_MODULE_ISOLATION, PROC_MODULE_1_PM, PROC_MODULE_1_RESTORE, PROC_UTILITY_FAILURE_TEST } from './parallel_constants';
 import { calculateParallelPowerFlow, checkParallelInterlock } from './services/parallel_engine';
-import { ParallelSimulationState, ParallelBreakerId, ParallelProcedure, ComponentStatus, LogEntry } from './parallel_types';
+import { ParallelSimulationState, ParallelBreakerId, ParallelProcedure, ComponentStatus, LogEntry, ParallelSystemMode } from './parallel_types';
 
 interface ParallelAppProps {
     onReturnToMenu?: () => void;
@@ -24,6 +24,8 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
     const [mistakes, setMistakes] = useState(0);
     const [selectedComp, setSelectedComp] = useState<string | null>(null);
     const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [autoMode, setAutoMode] = useState(true); // UPS Auto Mode - auto-recovery
+    const [showFaultPanel, setShowFaultPanel] = useState(false);
     const logContainerRef = useRef<HTMLDivElement>(null);
 
     const addLog = (message: string, type: LogEntry['type'] = 'INFO') => {
@@ -169,14 +171,62 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
         const interval = setInterval(() => {
             if (failReason) return;
             setState(prev => {
-                const newState = calculateParallelPowerFlow(prev);
+                let newState = calculateParallelPowerFlow(prev);
+
+                // AUTO MODE: Automatic recovery for both modules
+                if (autoMode) {
+                    const mainsOK = newState.voltages.utilityInput > 400;
+
+                    // Module 1 Auto-Recovery
+                    const q1_1Closed = newState.breakers[ParallelBreakerId.Q1_1];
+                    const dc1OK = newState.modules.module1.dcBusVoltage > 180;
+
+                    if (mainsOK && q1_1Closed && newState.modules.module1.rectifier.status === ComponentStatus.OFF) {
+                        newState.modules.module1.rectifier.status = ComponentStatus.STARTING;
+                        addLog('AUTO M1: Rectifier Starting', 'INFO');
+                    }
+                    if (dc1OK && newState.modules.module1.rectifier.status === ComponentStatus.NORMAL &&
+                        newState.modules.module1.inverter.status === ComponentStatus.OFF) {
+                        newState.modules.module1.inverter.status = ComponentStatus.STARTING;
+                        addLog('AUTO M1: Inverter Starting', 'INFO');
+                    }
+                    if (newState.modules.module1.inverter.status === ComponentStatus.NORMAL &&
+                        newState.modules.module1.inverter.voltageOut > 400 &&
+                        newState.modules.module1.staticSwitch.mode === 'BYPASS' &&
+                        !newState.modules.module1.staticSwitch.forceBypass) {
+                        newState.modules.module1.staticSwitch.mode = 'INVERTER';
+                        addLog('AUTO M1: Transferred to Inverter', 'INFO');
+                    }
+
+                    // Module 2 Auto-Recovery
+                    const q1_2Closed = newState.breakers[ParallelBreakerId.Q1_2];
+                    const dc2OK = newState.modules.module2.dcBusVoltage > 180;
+
+                    if (mainsOK && q1_2Closed && newState.modules.module2.rectifier.status === ComponentStatus.OFF) {
+                        newState.modules.module2.rectifier.status = ComponentStatus.STARTING;
+                        addLog('AUTO M2: Rectifier Starting', 'INFO');
+                    }
+                    if (dc2OK && newState.modules.module2.rectifier.status === ComponentStatus.NORMAL &&
+                        newState.modules.module2.inverter.status === ComponentStatus.OFF) {
+                        newState.modules.module2.inverter.status = ComponentStatus.STARTING;
+                        addLog('AUTO M2: Inverter Starting', 'INFO');
+                    }
+                    if (newState.modules.module2.inverter.status === ComponentStatus.NORMAL &&
+                        newState.modules.module2.inverter.voltageOut > 400 &&
+                        newState.modules.module2.staticSwitch.mode === 'BYPASS' &&
+                        !newState.modules.module2.staticSwitch.forceBypass) {
+                        newState.modules.module2.staticSwitch.mode = 'INVERTER';
+                        addLog('AUTO M2: Transferred to Inverter', 'INFO');
+                    }
+                }
+
                 monitorEvents(prevStateRef.current, newState);
                 prevStateRef.current = JSON.parse(JSON.stringify(newState));
                 return newState;
             });
         }, 200);
         return () => clearInterval(interval);
-    }, [failReason, booted, monitorEvents]);
+    }, [failReason, booted, monitorEvents, autoMode]);
 
     const toggleBreaker = useCallback((id: string) => {
         if (failReason) return;
@@ -229,7 +279,7 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                 }
                 if (action === 'TO_INVERTER') {
                     // Only allow transfer to inverter if inverter is ready
-                    if (targetModule.inverter.status === ComponentStatus.NORMAL && targetModule.inverter.voltageOut > 390) {
+                    if (targetModule.inverter.status === ComponentStatus.NORMAL && targetModule.inverter.voltageOut > 400) {
                         targetModule.staticSwitch.mode = 'INVERTER';
                         targetModule.staticSwitch.forceBypass = false;
                     } else {
@@ -309,21 +359,66 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                 </div>
             )}
             <div className="flex-1 flex flex-col p-0 h-full min-h-0 relative">
-                <div className="flex-none flex justify-between items-center bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b-2 border-cyan-500/30 shadow-2xl shadow-cyan-500/10 z-10 px-4 py-2 h-20 relative overflow-hidden">
+                <div className="flex-none flex justify-between items-center bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b-2 border-cyan-500/30 shadow-lg z-10 px-2 py-1 h-14 relative overflow-hidden">
                     {/* Subtle animated glow effect */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent opacity-50"></div>
-                    <div className="flex flex-col justify-center cursor-pointer group relative z-10" onClick={onReturnToMenu}>
-                        <h1 className="text-2xl font-black italic text-white tracking-tighter leading-none group-hover:text-cyan-400 transition-colors drop-shadow-[0_2px_8px_rgba(6,182,212,0.3)]">SafeOps <span className="text-cyan-400">UPS</span> <span className="text-base font-normal text-slate-300">PARALLEL</span></h1>
-                        <div className="text-[11px] text-cyan-300/70 font-mono tracking-widest mt-1 group-hover:text-cyan-400 transition-colors">REDUNDANT ARCHITECTURE {onReturnToMenu && '· CLICK TO EXIT'}</div>
+                    <div className="flex flex-col justify-center cursor-pointer group relative z-10 flex-shrink-0" onClick={onReturnToMenu}>
+                        <h1 className="text-base font-black italic text-white tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-400">UPS</span></h1>
+                        <div className={`text-[9px] font-mono tracking-wide ${state.systemMode === ParallelSystemMode.ONLINE_PARALLEL ? 'text-green-400' : state.systemMode === ParallelSystemMode.BATTERY_PARALLEL ? 'text-orange-400 animate-pulse' : state.systemMode === ParallelSystemMode.DEGRADED_REDUNDANCY ? 'text-yellow-400' : state.systemMode === ParallelSystemMode.EMERGENCY_SHUTDOWN ? 'text-red-500 animate-pulse' : 'text-cyan-300/70'}`}>
+                            {state.systemMode.replace(/_/g, ' ')} {state.redundancyOK ? '✓' : '⚠'}
+                        </div>
                     </div>
                     <div className="h-full flex-1 mx-4">
                         <ParallelDashboard state={state} />
                     </div>
-                    <div className="flex flex-col gap-2 relative z-10">
-                        <button onClick={() => startProcedure('')} className="px-4 py-1.5 bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 rounded-lg border border-cyan-500/30 hover:border-cyan-400/50 text-xs font-bold text-cyan-300 hover:text-cyan-200 transition-all shadow-lg hover:shadow-cyan-500/20">RESET SIM</button>
-                        <button onClick={() => alert('💡 INTERACTIVE SLD GUIDE\\n\\n• BREAKERS: Click any breaker (Q1, Q2, Q3, Q4, CB-L1, CB-L2) to toggle it OPEN/CLOSED\\n\\n• COMPONENTS: Click on RECT, INV, or STS boxes to open the faceplate control panel\\n\\n• FACEPLATE: From the faceplate, you can START/STOP components or transfer the STS\\n\\n• LOADS: Click on CRITICAL-A or CRITICAL-B to view load status\\n\\n• EVENT LOG: Watch the event log for real-time system events\\n\\n• SOPs: Follow Standard Operating Procedures on the right panel for guided training')} className="px-4 py-1.5 bg-gradient-to-br from-blue-800 to-blue-900 hover:from-blue-700 hover:to-blue-800 rounded-lg border border-blue-500/30 hover:border-blue-400/50 text-xs font-bold text-blue-300 hover:text-blue-200 transition-all shadow-lg hover:shadow-blue-500/20">? HELP</button>
+                    <div className="flex items-center gap-1 relative z-10 flex-shrink-0">
+                        <button onClick={() => startProcedure('')} className="px-2 py-1 bg-green-600 hover:bg-green-500 border border-green-400 rounded text-[10px] font-bold text-white" title="Reset">🔄</button>
+                        <button onClick={() => setAutoMode(!autoMode)} className={`px-2 py-1 rounded border text-[10px] font-bold ${autoMode ? 'bg-emerald-700 border-emerald-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title={autoMode ? 'Auto' : 'Manual'}>⚡</button>
+                        <button onClick={() => setShowFaultPanel(!showFaultPanel)} className={`px-2 py-1 rounded border text-[10px] font-bold ${showFaultPanel ? 'bg-red-700 border-red-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title="Faults">🎓</button>
+                        <button onClick={() => { setState(prev => ({ ...prev, faults: { ...prev.faults, epo: !prev.faults.epo } })); addLog(state.faults.epo ? 'EPO Reset' : 'EPO!', 'ALARM'); }} className={`px-2 py-1 rounded border text-[10px] font-bold ${state.faults.epo ? 'bg-red-600 border-red-400 text-white animate-pulse' : 'bg-red-900 border-red-700 text-red-300'}`} title="EPO">🛑</button>
                     </div>
                 </div>
+
+                {/* Fault Injection Panel */}
+                {showFaultPanel && (
+                    <div className="absolute top-24 right-4 z-50 bg-slate-900/95 border border-red-600/50 p-4 rounded-lg shadow-2xl w-64 backdrop-blur-md">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-red-400 font-bold text-sm">🎓 Fault Injection</h3>
+                            <button onClick={() => setShowFaultPanel(false)} className="text-slate-400 hover:text-white">✕</button>
+                        </div>
+                        <div className="space-y-2">
+                            <button
+                                onClick={() => { setState(prev => ({ ...prev, faults: { ...prev.faults, mainsFailure: !prev.faults.mainsFailure } })); addLog(state.faults.mainsFailure ? 'Utility power restored' : 'FAULT INJECTED: Mains Failure', 'ALARM'); }}
+                                className={`w-full px-3 py-2 rounded border text-xs font-bold ${state.faults.mainsFailure ? 'bg-red-700 border-red-400 text-white' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-red-900'}`}
+                            >⚡ Mains Failure {state.faults.mainsFailure && '(ACTIVE)'}</button>
+
+                            <div className="text-[10px] text-slate-400 pt-2">Module 1:</div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => { setState(prev => ({ ...prev, faults: { ...prev.faults, module1RectFault: !prev.faults.module1RectFault } })); addLog(state.faults.module1RectFault ? 'M1 Rectifier fault cleared' : 'FAULT: M1 Rectifier Trip', 'ALARM'); }}
+                                    className={`flex-1 px-2 py-1 rounded border text-[10px] font-bold ${state.faults.module1RectFault ? 'bg-red-700 border-red-400 text-white' : 'bg-slate-800 border-slate-600 text-slate-300'}`}
+                                >RECT1</button>
+                                <button
+                                    onClick={() => { setState(prev => ({ ...prev, faults: { ...prev.faults, module1InvFault: !prev.faults.module1InvFault } })); addLog(state.faults.module1InvFault ? 'M1 Inverter fault cleared' : 'FAULT: M1 Inverter Trip', 'ALARM'); }}
+                                    className={`flex-1 px-2 py-1 rounded border text-[10px] font-bold ${state.faults.module1InvFault ? 'bg-red-700 border-red-400 text-white' : 'bg-slate-800 border-slate-600 text-slate-300'}`}
+                                >INV1</button>
+                            </div>
+
+                            <div className="text-[10px] text-slate-400 pt-1">Module 2:</div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => { setState(prev => ({ ...prev, faults: { ...prev.faults, module2RectFault: !prev.faults.module2RectFault } })); addLog(state.faults.module2RectFault ? 'M2 Rectifier fault cleared' : 'FAULT: M2 Rectifier Trip', 'ALARM'); }}
+                                    className={`flex-1 px-2 py-1 rounded border text-[10px] font-bold ${state.faults.module2RectFault ? 'bg-red-700 border-red-400 text-white' : 'bg-slate-800 border-slate-600 text-slate-300'}`}
+                                >RECT2</button>
+                                <button
+                                    onClick={() => { setState(prev => ({ ...prev, faults: { ...prev.faults, module2InvFault: !prev.faults.module2InvFault } })); addLog(state.faults.module2InvFault ? 'M2 Inverter fault cleared' : 'FAULT: M2 Inverter Trip', 'ALARM'); }}
+                                    className={`flex-1 px-2 py-1 rounded border text-[10px] font-bold ${state.faults.module2InvFault ? 'bg-red-700 border-red-400 text-white' : 'bg-slate-800 border-slate-600 text-slate-300'}`}
+                                >INV2</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex-1 min-h-0 relative bg-slate-900 overflow-hidden border-t border-slate-800">
                     {/* Interactive SLD Hint Banner - Bottom left corner to avoid covering components */}
                     <div className="absolute bottom-2 left-2 z-30 bg-slate-800/90 px-3 py-1 rounded border border-cyan-500/40 shadow-lg">
@@ -354,7 +449,7 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                     </div>
                 </div>
             </div>
-            <div className="w-80 flex-none bg-slate-900 border-l border-slate-800 shadow-xl z-20">
+            <div className="w-56 flex-none bg-slate-900 border-l border-slate-800 shadow-xl z-20 overflow-hidden">
                 <ParallelProcedurePanel
                     procedure={activeProcedure}
                     currentStepIndex={stepIndex}

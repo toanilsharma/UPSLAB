@@ -53,7 +53,7 @@ export const Dashboard = ({ state }: { state: any }) => {
     } else if (state.components.staticSwitch.mode === 'BYPASS') {
         sysStatus = "ON BYPASS";
         sysColor = "text-amber-400";
-    } else if (state.components.rectifier.voltageOut < 300 && state.battery.chargeLevel > 0 && state.currents.output > 0) {
+    } else if (state.components.rectifier.voltageOut < 150 && state.battery.chargeLevel > 0 && state.currents.output > 0) {
         sysStatus = "BATTERY DISCHARGE";
         sysColor = "text-orange-500";
     }
@@ -65,21 +65,21 @@ export const Dashboard = ({ state }: { state: any }) => {
                 value={state.voltages.utilityInput}
                 unit="V"
                 min={0} max={500}
-                alertLow={360} alertHigh={440}
+                alertLow={400} alertHigh={440}
             />
             <DigitalMeter
                 label="DC Link"
                 value={state.voltages.dcBus}
                 unit="V"
-                min={0} max={600}
-                alertLow={400} alertHigh={580}
+                min={0} max={300}
+                alertLow={155} alertHigh={250}
             />
             <DigitalMeter
                 label="Output"
                 value={state.voltages.loadBus}
                 unit="V"
                 min={0} max={500}
-                alertLow={380} alertHigh={420}
+                alertLow={400} alertHigh={440}
             />
             <DigitalMeter
                 label="Battery"

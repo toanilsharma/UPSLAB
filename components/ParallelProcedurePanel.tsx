@@ -26,36 +26,36 @@ export const ParallelProcedurePanel: React.FC<ProcedurePanelProps> = ({
 
     if (!procedure) {
         return (
-            <div className="h-full p-4 flex flex-col gap-4">
-                <h2 className="text-xl font-bold text-slate-200">Parallel System SOPs</h2>
+            <div className="h-full p-2 flex flex-col gap-2 overflow-hidden">
+                <h2 className="text-sm font-bold text-slate-200">Parallel SOPs</h2>
 
-                <button onClick={() => onSelectProcedure('sys_maint_bypass')} className="bg-slate-700 hover:bg-blue-600 p-3 rounded text-left border border-slate-600">
-                    <div className="font-bold">SOP-P-01: System Maintenance Bypass</div>
-                    <div className="text-xs text-slate-400">Transfer BOTH modules to bypass</div>
+                <button onClick={() => onSelectProcedure('sys_maint_bypass')} className="bg-slate-700 hover:bg-blue-600 p-1.5 rounded text-left border border-slate-600 overflow-hidden">
+                    <div className="font-bold text-[11px] truncate">SOP-01: Maint Bypass</div>
+                    <div className="text-[9px] text-slate-400 truncate">Both modules to bypass</div>
                 </button>
 
-                <button onClick={() => onSelectProcedure('module_iso')} className="bg-slate-700 hover:bg-teal-600 p-3 rounded text-left border border-slate-600">
-                    <div className="font-bold">SOP-P-02: Module Isolation (Quick)</div>
-                    <div className="text-xs text-slate-400">Isolate M1, Run on M2</div>
+                <button onClick={() => onSelectProcedure('module_iso')} className="bg-slate-700 hover:bg-teal-600 p-1.5 rounded text-left border border-slate-600 overflow-hidden">
+                    <div className="font-bold text-[11px] truncate">SOP-02: Module Isolate</div>
+                    <div className="text-[9px] text-slate-400 truncate">Isolate M1, Run M2</div>
                 </button>
 
-                <button onClick={() => onSelectProcedure('module1_pm')} className="bg-slate-700 hover:bg-purple-600 p-3 rounded text-left border border-slate-600">
-                    <div className="font-bold">SOP-P-03: Module 1 PM Isolation</div>
-                    <div className="text-xs text-slate-400">Full isolation procedure for preventive maintenance</div>
+                <button onClick={() => onSelectProcedure('module1_pm')} className="bg-slate-700 hover:bg-purple-600 p-1.5 rounded text-left border border-slate-600 overflow-hidden">
+                    <div className="font-bold text-[11px] truncate">SOP-03: M1 PM</div>
+                    <div className="text-[9px] text-slate-400 truncate">Full isolation</div>
                 </button>
 
-                <button onClick={() => onSelectProcedure('module1_restore')} className="bg-slate-700 hover:bg-green-600 p-3 rounded text-left border border-slate-600">
-                    <div className="font-bold">SOP-P-04: Module 1 Restoration</div>
-                    <div className="text-xs text-slate-400">Restore Module 1 after maintenance complete</div>
+                <button onClick={() => onSelectProcedure('module1_restore')} className="bg-slate-700 hover:bg-green-600 p-1.5 rounded text-left border border-slate-600 overflow-hidden">
+                    <div className="font-bold text-[11px] truncate">SOP-04: M1 Restore</div>
+                    <div className="text-[9px] text-slate-400 truncate">Restore after maint</div>
                 </button>
 
-                <button onClick={() => onSelectProcedure('utility_fail_test')} className="bg-slate-700 hover:bg-amber-600 p-3 rounded text-left border border-slate-600">
-                    <div className="font-bold">SOP-P-05: Utility Failure Test</div>
-                    <div className="text-xs text-slate-400">Simulate total power failure & battery backup test</div>
+                <button onClick={() => onSelectProcedure('utility_fail_test')} className="bg-slate-700 hover:bg-amber-600 p-1.5 rounded text-left border border-slate-600 overflow-hidden">
+                    <div className="font-bold text-[11px] truncate">SOP-05: Utility Fail</div>
+                    <div className="text-[9px] text-slate-400 truncate">Battery backup test</div>
                 </button>
 
-                <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-700/50 rounded text-sm text-yellow-200">
-                    WARNING: Parallel system operations require strict synchronization checks.
+                <div className="mt-1 p-2 bg-yellow-900/20 border border-yellow-700/50 rounded text-[9px] text-yellow-200">
+                    ⚠️ Requires strict sync.
                 </div>
             </div>
         );

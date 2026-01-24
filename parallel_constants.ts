@@ -1,30 +1,31 @@
 
-import { ParallelBreakerId, ComponentStatus, ParallelProcedure, ParallelSimulationState } from './parallel_types';
+import { ParallelBreakerId, ComponentStatus, ParallelProcedure, ParallelSimulationState, ParallelSystemMode } from './parallel_types';
 
 const COMPONENT_DEFAULTS = {
     status: ComponentStatus.NORMAL,
     temperature: 35,
     loadPct: 45, // approx 90% total load shared
     efficiency: 0.95,
-    voltageOut: 540
+    voltageOut: 220
 };
 
 const BATTERY_DEFAULTS = {
     chargeLevel: 100,
     temp: 25,
     health: 100,
-    voltage: 540,
+    voltage: 220,
 };
 
 const MODULE_DEFAULTS = {
-    rectifier: { ...COMPONENT_DEFAULTS, voltageOut: 540 },
-    inverter: { ...COMPONENT_DEFAULTS, voltageOut: 400, temperature: 45 },
+    rectifier: { ...COMPONENT_DEFAULTS, voltageOut: 220 },
+    inverter: { ...COMPONENT_DEFAULTS, voltageOut: 415, temperature: 45 },
     staticSwitch: { mode: 'INVERTER' as const, status: 'OK' as const, syncError: 0, forceBypass: false },
     battery: { ...BATTERY_DEFAULTS },
-    dcBusVoltage: 540
+    dcBusVoltage: 220
 };
 
 export const INITIAL_PARALLEL_STATE: ParallelSimulationState = {
+    systemMode: ParallelSystemMode.ONLINE_PARALLEL,
     breakers: {
         [ParallelBreakerId.Q1_1]: true,
         [ParallelBreakerId.Q2_1]: true, // Bypass Input 1
@@ -42,8 +43,9 @@ export const INITIAL_PARALLEL_STATE: ParallelSimulationState = {
         [ParallelBreakerId.Load2]: true,
     },
     voltages: {
-        utilityInput: 400,
-        loadBus: 400,
+        utilityInput: 415,
+        loadBus: 415,
+        bypassInput: 415,
     },
     frequencies: {
         utility: 50.0,
@@ -57,6 +59,20 @@ export const INITIAL_PARALLEL_STATE: ParallelSimulationState = {
     modules: {
         module1: JSON.parse(JSON.stringify(MODULE_DEFAULTS)),
         module2: JSON.parse(JSON.stringify(MODULE_DEFAULTS))
+    },
+    // Parallel-specific fields
+    availableModules: 2,
+    totalCapacityKW: 200, // 2 x 100kVA modules
+    loadKW: 100,
+    redundancyOK: true, // N+1 OK
+    // Fault injection
+    faults: {
+        epo: false,
+        mainsFailure: false,
+        module1RectFault: false,
+        module1InvFault: false,
+        module2RectFault: false,
+        module2InvFault: false,
     },
     alarms: [],
     lastTick: 0,

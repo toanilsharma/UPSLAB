@@ -16,28 +16,28 @@ interface QuickReferenceCardProps {
 
 // IEC 62040-3 VFI Classification Thresholds
 const IEC_THRESHOLDS = {
-    // Input Voltage: 400V ±10% (IEC 62040-3)
-    INPUT_VOLTAGE_NOMINAL: 400,
-    INPUT_VOLTAGE_MIN: 360,  // -10%
-    INPUT_VOLTAGE_MAX: 440,  // +10%
+    // Input Voltage: 415V ±10% (IEC 62040-3)
+    INPUT_VOLTAGE_NOMINAL: 415,
+    INPUT_VOLTAGE_MIN: 374,  // -10%
+    INPUT_VOLTAGE_MAX: 457,  // +10%
 
-    // Output Voltage: 400V ±1% (IEC 62040-3 VFI)
-    OUTPUT_VOLTAGE_NOMINAL: 400,
-    OUTPUT_VOLTAGE_MIN: 396,  // -1%
-    OUTPUT_VOLTAGE_MAX: 404,  // +1%
+    // Output Voltage: 415V ±1% (IEC 62040-3 VFI)
+    OUTPUT_VOLTAGE_NOMINAL: 415,
+    OUTPUT_VOLTAGE_MIN: 411,  // -1%
+    OUTPUT_VOLTAGE_MAX: 419,  // +1%
 
     // Frequency: 50Hz ±0.5% (IEC 62040-3 VFI)
     FREQUENCY_NOMINAL: 50.0,
     FREQUENCY_MIN: 49.75,  // -0.5%
     FREQUENCY_MAX: 50.25,  // +0.5%
 
-    // DC Bus (Design Specification)
-    DC_BUS_NOMINAL: 540,
-    DC_BUS_MIN_FOR_INVERTER: 350,
+    // DC Bus (Design Specification - 220V DC System)
+    DC_BUS_NOMINAL: 220,
+    DC_BUS_MIN_FOR_INVERTER: 155,
 
-    // Battery (IEEE 1188 VRLA Guidelines)
-    BATTERY_FLOAT_VOLTAGE: 540,      // 2.27V/cell × 240 cells
-    BATTERY_CUTOFF_VOLTAGE: 380,     // 1.75V/cell × 240 cells
+    // Battery (IEEE 1188 VRLA Guidelines - 220V System)
+    BATTERY_FLOAT_VOLTAGE: 220,      // Float voltage
+    BATTERY_CUTOFF_VOLTAGE: 155,     // End of discharge
     BATTERY_LOW_SOC: 20,             // % State of Charge
 
     // Synchronization (IEC 62040-3)
@@ -116,7 +116,7 @@ export const QuickReferenceCard: React.FC<QuickReferenceCardProps> = ({ visible,
                                 </div>
                                 <div className="flex justify-between text-xs text-slate-500">
                                     <span>Nominal</span>
-                                    <span>400V ±10% (360-440V)</span>
+                                    <span>415V ±10% (374-457V)</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-400">Frequency</span>
@@ -145,7 +145,7 @@ export const QuickReferenceCard: React.FC<QuickReferenceCardProps> = ({ visible,
                                 </div>
                                 <div className="flex justify-between text-xs text-slate-500">
                                     <span>Nominal / Min</span>
-                                    <span>540V / 350V min</span>
+                                    <span>220V / 155V min</span>
                                 </div>
                             </div>
                         </div>
@@ -164,11 +164,11 @@ export const QuickReferenceCard: React.FC<QuickReferenceCardProps> = ({ visible,
                                 </div>
                                 <div className="flex justify-between text-xs text-slate-500">
                                     <span>Tolerance</span>
-                                    <span>400V ±1% (396-404V)</span>
+                                    <span>415V ±1% (411-419V)</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-400">Inverter Output</span>
-                                    <span className={state.components.inverter.voltageOut > 390 ? 'text-green-400' : 'text-red-400'}>
+                                    <span className={state.components.inverter.voltageOut > 400 ? 'text-green-400' : 'text-red-400'}>
                                         {state.components.inverter.voltageOut.toFixed(0)}V
                                     </span>
                                 </div>
@@ -201,7 +201,7 @@ export const QuickReferenceCard: React.FC<QuickReferenceCardProps> = ({ visible,
                                 </div>
                                 <div className="flex justify-between text-xs text-slate-500">
                                     <span>Float / Cutoff</span>
-                                    <span>540V / 380V</span>
+                                    <span>220V / 155V</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-400">Current</span>

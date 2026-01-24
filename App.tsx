@@ -8,8 +8,9 @@ import { TutorialOverlay, useTutorial } from './components/TutorialOverlay';
 import { AchievementPanel, AchievementToast } from './components/AchievementPanel';
 import { QuickReferenceCard } from './components/QuickReferenceCard';
 import { INITIAL_STATE, PROC_MAINT_BYPASS, PROC_RETURN_FROM_BYPASS, PROC_BLACK_START, PROC_COLD_START, PROC_EMERGENCY, PROC_FAILURE_RECOVERY } from './constants';
-import { calculatePowerFlow, checkInterlock } from './services/engine';
-import { SimulationState, BreakerId, Procedure, ComponentStatus, LogEntry } from './types';
+import { calculatePowerFlow } from './services/engine';
+import { UPSController } from './services/UPSController';
+import { SimulationState, BreakerId, Procedure, ComponentStatus, LogEntry, UPSMode, UPSCommand } from './types';
 import { audioService } from './services/audioService';
 import { achievementService, Achievement } from './services/achievementService';
 
@@ -34,6 +35,7 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
     const [showAchievements, setShowAchievements] = useState(false);
     const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
     const [showQuickRef, setShowQuickRef] = useState(false);
+    const [autoMode, setAutoMode] = useState(true); // UPS Auto Mode - auto-recovery
 
     // FACEPLATE STATE
     const [selectedComp, setSelectedComp] = useState<string | null>(null);
@@ -61,7 +63,41 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
             if (failReason) return; // Stop physics on fail
 
             setState(prev => {
-                const next = calculatePowerFlow(prev);
+                // 1. Controller Logic (FSM & Protections)
+                let next = UPSController.processTick(prev);
+
+                // 2. Physics Engine
+                next = calculatePowerFlow(next);
+
+                // 3. AUTO MODE: Automatic recovery when conditions are met
+                if (autoMode) {
+                    const mainsOK = next.voltages.utilityInput > 400;
+                    const q1Closed = next.breakers.Q1;
+                    const dcOK = next.voltages.dcBus > 180;
+
+                    // Auto-start rectifier when mains is available and Q1 is closed
+                    if (mainsOK && q1Closed && next.components.rectifier.status === ComponentStatus.OFF) {
+                        next.components.rectifier.status = ComponentStatus.STARTING;
+                        addLog('AUTO: Rectifier Starting (Mains Restored)', 'INFO');
+                    }
+
+                    // Auto-start inverter when DC bus is stable and rectifier is normal
+                    if (dcOK && next.components.rectifier.status === ComponentStatus.NORMAL &&
+                        next.components.inverter.status === ComponentStatus.OFF) {
+                        next.components.inverter.status = ComponentStatus.STARTING;
+                        addLog('AUTO: Inverter Starting (DC Stable)', 'INFO');
+                    }
+
+                    // Auto-transfer to inverter when inverter is ready and on bypass
+                    if (next.components.inverter.status === ComponentStatus.NORMAL &&
+                        next.components.inverter.voltageOut > 400 &&
+                        next.components.staticSwitch.mode === 'BYPASS' &&
+                        !next.components.staticSwitch.forceBypass) {
+                        next.components.staticSwitch.mode = 'INVERTER';
+                        next.upsMode = UPSMode.ONLINE;
+                        addLog('AUTO: Transferred to Inverter', 'INFO');
+                    }
+                }
 
                 // Log Alarms
                 const newAlarms = next.alarms.filter(a => !prev.alarms.includes(a));
@@ -69,12 +105,14 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
                 newAlarms.forEach(a => addLog(`ALARM: ${a}`, 'ALARM'));
                 resolvedAlarms.forEach(a => addLog(`CLEARED: ${a}`, 'INFO'));
 
+                // Log Mode Changes
+                if (prev.upsMode !== next.upsMode) {
+                    addLog(`MODE CHANGE: ${next.upsMode}`, 'ACTION');
+                }
+
                 // Log Auto-Ops
                 if (prev.components.staticSwitch.mode !== next.components.staticSwitch.mode) {
                     addLog(`STS TRANSFER: ${prev.components.staticSwitch.mode} -> ${next.components.staticSwitch.mode}`, 'ACTION');
-                }
-                if (prev.components.inverter.status !== ComponentStatus.NORMAL && next.components.inverter.status === ComponentStatus.NORMAL) {
-                    addLog('Inverter Output Stabilized.', 'INFO');
                 }
 
                 return next;
@@ -90,7 +128,11 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
         const currentState = state.breakers[id];
         const newState = !currentState;
 
-        const check = checkInterlock('BREAKER', id, newState, state);
+        const check = UPSController.checkBreakerPermission(state, id, currentState); // currentState is "isClosed", so passing true means we are about to Open it? Wait.
+        // checkBreakerPermission logic: isOpenOperation is true if we are Opening.
+        // If currentState is true (Closed), we are Opening. So isOpenOperation = true.
+        // If currentState is false (Open), we are Closing. So isOpenOperation = false.
+
         if (!check.allowed) {
             audioService.play('error');
             setNotification({ msg: check.reason || 'Blocked', type: 'error' });
@@ -101,12 +143,15 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
         }
 
         // Play sound effect
-        audioService.play(newState ? 'breaker_close' : 'breaker_open');
+        audioService.play(!currentState ? 'breaker_close' : 'breaker_open');
 
-        addLog(`Operator ${newState ? 'CLOSED' : 'OPENED'} Breaker ${id}`, 'ACTION');
+        addLog(`Operator ${!currentState ? 'CLOSED' : 'OPENED'} Breaker ${id}`, 'ACTION');
         setState(prev => {
-            const nextState = { ...prev, breakers: { ...prev.breakers, [id]: newState } };
-            return calculatePowerFlow(nextState);
+            const nextState = { ...prev, breakers: { ...prev.breakers, [id]: !currentState } };
+            // Immediate tick to reflect voltage changes? Or wait? 
+            // Better to wait for loop, but for responsiveness in UI we usually update state immediately.
+            // Let's just update the breaker map.
+            return nextState;
         });
     }, [state, failReason, activeProcedure]);
 
@@ -126,34 +171,51 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
         achievementService.onComponentInspected(selectedComp);
 
         setState(prev => {
-            const next = { ...prev, components: { ...prev.components } };
+            let cmd: UPSCommand | null = null;
 
             if (selectedComp === 'rectifier') {
-                if (action === 'START') next.components.rectifier.status = ComponentStatus.STARTING;
-                if (action === 'STOP') next.components.rectifier.status = ComponentStatus.OFF;
-                if (action === 'RESET' && next.components.rectifier.status === ComponentStatus.FAULT) next.components.rectifier.status = ComponentStatus.OFF;
+                if (action === 'START') cmd = UPSCommand.RECT_ON;
+                if (action === 'STOP') cmd = UPSCommand.RECT_OFF;
             }
             else if (selectedComp === 'inverter') {
-                if (action === 'START') next.components.inverter.status = ComponentStatus.STARTING;
-                if (action === 'STOP') next.components.inverter.status = ComponentStatus.OFF;
-                if (action === 'RESET' && next.components.inverter.status === ComponentStatus.FAULT) next.components.rectifier.status = ComponentStatus.OFF;
+                if (action === 'START') cmd = UPSCommand.INV_ON;
+                if (action === 'STOP') cmd = UPSCommand.INV_OFF;
             }
             else if (selectedComp === 'staticSwitch') {
+                if (action === 'TO_BYPASS') cmd = UPSCommand.TRANSFER_MAINT;
+            }
+
+            // Using Controller for Breakers/Rect/Inv, but STS logic was unique.
+            // Let's use the executeCommand for Rect/Inv.
+
+            if (cmd) {
+                const res = UPSController.executeCommand(prev, cmd);
+                if (res.log) addLog(res.log, res.log.includes('ERROR') ? 'ERROR' : 'ACTION');
+                return res.newState;
+            }
+
+            // Fallback for STS (Manual Transfer)
+            const next = { ...prev };
+            if (selectedComp === 'staticSwitch') {
                 if (action === 'TO_BYPASS') {
+                    // Manual demand to transfer
                     next.components.staticSwitch.mode = 'BYPASS';
                     next.components.staticSwitch.forceBypass = true;
+                    addLog('Operator Forced STS to BYPASS', 'ACTION');
                 }
                 if (action === 'TO_INVERTER') {
+                    // Try return
                     if (next.components.inverter.status === ComponentStatus.NORMAL) {
                         next.components.staticSwitch.mode = 'INVERTER';
                         next.components.staticSwitch.forceBypass = false;
+                        addLog('Operator Requested STS to INVERTER', 'ACTION');
                     } else {
                         audioService.play('error');
                         setNotification({ msg: 'Transfer Failed: Inverter Not Ready', type: 'error' });
                     }
                 }
             }
-            return calculatePowerFlow(next);
+            return next;
         });
     };
 
@@ -200,7 +262,11 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
         setFailReason(null);
         setMistakes(0);
         setProcedureStartTime(Date.now()); // Track start time for achievements
-        setState(proc.initialState as SimulationState);
+        const startState = { ...INITIAL_STATE, ...proc.initialState };
+        // Ensure Mode is set correctly for start state
+        // (Simplification: assuming INITIAL_STATE has UPSMode.OFF or similar, and procedure overrides it if needed)
+
+        setState(startState as SimulationState);
     };
 
     const nextStep = () => {
@@ -294,18 +360,29 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
                 <div className="flex-none flex justify-between items-center bg-slate-900 border-b border-cyan-500/20 shadow-lg z-10 px-4 py-2 h-20">
                     <div className="flex flex-col justify-center cursor-pointer group" onClick={onReturnToMenu}>
                         <h1 className="text-xl font-black italic text-slate-100 tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-500">UPS</span> <span className="text-sm font-normal text-slate-400">SINGLE</span></h1>
-                        <div className="text-[10px] text-slate-400 font-mono tracking-widest mt-1 group-hover:text-cyan-500 transition-colors">DIGITAL TWIN v2.5{onReturnToMenu && ' · CLICK TO EXIT'}</div>
+                        <div className="text-[10px] text-slate-400 font-mono tracking-widest mt-1 group-hover:text-cyan-500 transition-colors">
+                            {state.upsMode} {/* Display Mode Here */}
+                            {onReturnToMenu && ' · CLICK TO EXIT'}
+                        </div>
                     </div>
 
                     <div className="h-full flex-1 mx-4">
                         <Dashboard state={state} />
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                        <button onClick={() => startProcedure('')} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600 text-xs font-bold text-slate-300 transition-colors">RESET SIM</button>
-                        <button onClick={() => setShowQuickRef(!showQuickRef)} className={`px-3 py-1 rounded border text-xs font-bold transition-colors ${showQuickRef ? 'bg-cyan-900 border-cyan-500 text-cyan-200' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-cyan-900 hover:border-cyan-500'}`}>📋 REF</button>
-                        <button onClick={showHelp} className="px-3 py-1 bg-slate-800 hover:bg-blue-900 rounded border border-slate-600 hover:border-blue-500 text-xs font-bold text-slate-300 hover:text-blue-400 transition-colors">? HELP</button>
-                        <button onClick={() => setShowInstructor(!showInstructor)} className={`px-3 py-1 rounded border text-xs font-bold transition-colors ${showInstructor ? 'bg-red-900 border-red-500 text-white' : 'bg-slate-800 border-slate-600 text-slate-300'}`}>INSTRUCTOR</button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => startProcedure('')} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 border border-green-400 rounded text-xs font-bold text-white transition-colors shadow-md" title="Reset UPS to normal running state">
+                            🔄 <span className="hidden sm:inline">RESET</span>
+                        </button>
+                        <button onClick={() => setAutoMode(!autoMode)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${autoMode ? 'bg-emerald-700 border-emerald-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title={autoMode ? "Auto-recovery ON: System auto-starts when power returns" : "Manual mode: You must start components manually"}>
+                            ⚡ <span className="hidden sm:inline">{autoMode ? 'AUTO' : 'MANUAL'}</span>
+                        </button>
+                        <button onClick={() => setShowQuickRef(!showQuickRef)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${showQuickRef ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title="Quick Reference Card - IEC/IEEE Thresholds">
+                            📋 <span className="hidden sm:inline">REF</span>
+                        </button>
+                        <button onClick={() => setShowInstructor(!showInstructor)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${showInstructor ? 'bg-red-700 border-red-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title="Instructor Panel - Inject Faults for Training">
+                            🎓 <span className="hidden sm:inline">FAULTS</span>
+                        </button>
                     </div>
                 </div>
 

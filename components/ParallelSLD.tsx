@@ -316,7 +316,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
 
                     {/* DC Bus */}
                     <PowerLine d="M280,112 L370,112" energized={modules.module1.dcBusVoltage > 50} thick />
-                    <text x="325" y="105" textAnchor="middle" className="fill-yellow-400 text-[10px] font-bold">⚡540VDC</text>
+                    <text x="325" y="105" textAnchor="middle" className="fill-yellow-400 text-[10px] font-bold">⚡220VDC</text>
                     <Node x={370} y={112} />
 
                     {/* Battery branch */}
@@ -415,7 +415,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
 
                     {/* DC Bus */}
                     <PowerLine d="M280,112 L370,112" energized={modules.module2.dcBusVoltage > 50} thick />
-                    <text x="325" y="105" textAnchor="middle" className="fill-yellow-400 text-[10px] font-bold">⚡540VDC</text>
+                    <text x="325" y="105" textAnchor="middle" className="fill-yellow-400 text-[10px] font-bold">⚡220VDC</text>
                     <Node x={370} y={112} />
 
                     {/* Battery branch */}
@@ -505,7 +505,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
 
                 {/* Legend */}
                 <g transform="translate(10, 475)">
-                    <text className="fill-slate-400 text-[10px] font-mono">UTILITY: 400VAC 3Ø | DC BUS: 540VDC | OUTPUT: 400VAC 3Ø 50Hz</text>
+                    <text className="fill-slate-400 text-[10px] font-mono">UTILITY: 415VAC 3Ø | DC BUS: 220VDC | OUTPUT: 415VAC 3Ø 50Hz</text>
                 </g>
 
             </svg>

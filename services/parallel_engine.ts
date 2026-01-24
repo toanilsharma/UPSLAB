@@ -1,5 +1,6 @@
 
-import { ParallelSimulationState, ParallelBreakerId, ComponentStatus, UPSModuleState } from '../parallel_types';
+import { ParallelSimulationState, ParallelBreakerId, ComponentStatus, UPSModuleState, ParallelSystemMode } from '../parallel_types';
+import { ParallelUPSController } from './ParallelUPSController';
 
 const AMBIENT_TEMP = 22; // Server room temperature
 const THERMAL_MASS = 0.08; // Realistic slow heating
@@ -18,17 +19,17 @@ const processModule = (
     // --- 1. RECTIFIER PHYSICS: "Walk-in" (Soft Start) Logic ---
     if (module.rectifier.status === ComponentStatus.FAULT) {
         module.rectifier.voltageOut = 0;
-    } else if (breakers.mainInput && utilityInput > 380) {
+    } else if (breakers.mainInput && utilityInput > 400) {
         if (module.rectifier.status === ComponentStatus.STARTING) {
             // Linear Ramp Up (Walk-in) - 5 seconds to full voltage
-            module.rectifier.voltageOut += 3;
-            if (module.rectifier.voltageOut >= 540) {
+            module.rectifier.voltageOut += 2;
+            if (module.rectifier.voltageOut >= 220) {
                 module.rectifier.status = ComponentStatus.NORMAL;
-                module.rectifier.voltageOut = 540;
+                module.rectifier.voltageOut = 220;
             }
         } else if (module.rectifier.status === ComponentStatus.NORMAL) {
             // PID Simulation: Slight fluctuation around setpoint
-            module.rectifier.voltageOut = 540 + (Math.sin(now / 2000) * 0.2);
+            module.rectifier.voltageOut = 220 + (Math.sin(now / 2000) * 0.2);
         } else {
             // OFF but Input Live: Capacitors hold charge briefly then decay
             module.rectifier.voltageOut = Math.max(0, module.rectifier.voltageOut * 0.95);
@@ -44,7 +45,7 @@ const processModule = (
     module.battery.current = 0;
 
     // Determine Dominant DC Source
-    if (module.rectifier.voltageOut > 400) {
+    if (module.rectifier.voltageOut > 180) {
         busV = module.rectifier.voltageOut;
         dcSource = 'RECT';
     }
@@ -56,7 +57,7 @@ const processModule = (
         if (module.battery.chargeLevel > 90) battCurveFactor = 1.05; // Surface charge
         else if (module.battery.chargeLevel < 20) battCurveFactor = 0.90; // Knee of curve
 
-        const battOpenCircuitV = 380 + ((module.battery.chargeLevel / 100) * (540 - 380) * battCurveFactor);
+        const battOpenCircuitV = 155 + ((module.battery.chargeLevel / 100) * (220 - 155) * battCurveFactor);
 
         if (dcSource === 'RECT') {
             // CHARGING LOGIC
@@ -94,16 +95,16 @@ const processModule = (
     // --- 3. INVERTER PHYSICS ---
     if (module.inverter.status === ComponentStatus.FAULT) {
         module.inverter.voltageOut = 0;
-    } else if (module.dcBusVoltage > 350 && module.inverter.status !== ComponentStatus.OFF) {
-        // Inverter needs >350V DC to modulate AC
+    } else if (module.dcBusVoltage > 155 && module.inverter.status !== ComponentStatus.OFF) {
+        // Inverter needs >155V DC to modulate AC (220V system)
         if (module.inverter.status === ComponentStatus.STARTING) {
             module.inverter.voltageOut += 10;
-            if (module.inverter.voltageOut >= 400) {
+            if (module.inverter.voltageOut >= 415) {
                 module.inverter.status = ComponentStatus.NORMAL;
-                module.inverter.voltageOut = 400;
+                module.inverter.voltageOut = 415;
             }
         } else {
-            module.inverter.voltageOut = 400 + (Math.sin(now / 1000) * 0.2);
+            module.inverter.voltageOut = 415 + (Math.sin(now / 1000) * 0.2);
         }
     } else {
         module.inverter.status = ComponentStatus.OFF;
@@ -116,21 +117,28 @@ const processModule = (
 export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): ParallelSimulationState => {
     const now = Date.now();
 
-    const s: ParallelSimulationState = {
-        ...prevState,
-        breakers: { ...prevState.breakers },
-        voltages: { ...prevState.voltages },
-        frequencies: { ...prevState.frequencies },
+    // First run controller FSM
+    let s = ParallelUPSController.processTick(prevState);
+
+    // Deep copy for physics
+    s = {
+        ...s,
+        breakers: { ...s.breakers },
+        voltages: { ...s.voltages },
+        frequencies: { ...s.frequencies },
         modules: {
-            module1: { ...prevState.modules.module1 },
-            module2: { ...prevState.modules.module2 }
+            module1: JSON.parse(JSON.stringify(s.modules.module1)),
+            module2: JSON.parse(JSON.stringify(s.modules.module2))
         },
-        alarms: [],
+        faults: { ...s.faults },
         lastTick: now
     };
 
+    // Clear alarms for fresh calculation
+    s.alarms = [];
+
     const utilityInput = s.voltages.utilityInput;
-    const utilityLive = utilityInput > 380;
+    const utilityLive = utilityInput > 400; // 415V system
 
     // --- PROCESS MODULE 1 WITH REALISTIC PHYSICS ---
     s.modules.module1 = processModule(
@@ -162,7 +170,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
 
     // --- STATIC SWITCH LOGIC FOR EACH MODULE ---
     const processStaticSwitch = (module: UPSModuleState, bypassAvailable: boolean) => {
-        const inverterReady = module.inverter.status === ComponentStatus.NORMAL && module.inverter.voltageOut > 390;
+        const inverterReady = module.inverter.status === ComponentStatus.NORMAL && module.inverter.voltageOut > 400;
 
         // Calculate sync error
         const freqDiff = Math.abs(50.0 - s.frequencies.utility);
@@ -226,7 +234,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
         const activeCount = sources.length;
 
         if (activeCount > 0) {
-            s.voltages.loadBus = 400;
+            s.voltages.loadBus = 415;
 
             // AUTOMATIC LOAD BALANCING WITH REDUNDANCY
             const ampsPerModule = loadAmps / activeCount;
@@ -384,30 +392,37 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
         s.alarms.push('SYSTEM ON BYPASS - NO INVERTER');
     }
 
+    // System Mode Alarms
+    if (s.systemMode === ParallelSystemMode.EMERGENCY_SHUTDOWN) {
+        s.alarms.push('CRITICAL: EMERGENCY SHUTDOWN ACTIVE');
+    }
+    if (s.systemMode === ParallelSystemMode.BATTERY_PARALLEL) {
+        s.alarms.push('SYSTEM: PARALLEL BATTERY OPERATION');
+    }
+    if (s.systemMode === ParallelSystemMode.DEGRADED_REDUNDANCY) {
+        s.alarms.push('SYSTEM: REDUNDANCY DEGRADED');
+    }
+    if (s.systemMode === ParallelSystemMode.STATIC_BYPASS) {
+        s.alarms.push('SYSTEM: ON STATIC BYPASS');
+    }
+    if (s.systemMode === ParallelSystemMode.MAINT_BYPASS) {
+        s.alarms.push('SYSTEM: MAINTENANCE BYPASS ACTIVE');
+    }
+
+    // Fault Alarms
+    if (s.faults.epo) s.alarms.push('CRITICAL: EPO ACTIVATED');
+    if (s.faults.mainsFailure) s.alarms.push('ALARM: UTILITY POWER FAILURE');
+
     return s;
 };
 
-// Interlock checking logic (keep existing)
+// Interlock checking logic - uses ParallelUPSController
 export const checkParallelInterlock = (actionType: string, target: string, value: any, state: ParallelSimulationState): { allowed: boolean; reason?: string } => {
-    // Maintenance Bypass Interlock
-    if (actionType === 'BREAKER' && (target === ParallelBreakerId.Q3_1 || target === ParallelBreakerId.Q3_2) && value === true) {
-        const isM1 = target === ParallelBreakerId.Q3_1;
-        const module = isM1 ? state.modules.module1 : state.modules.module2;
 
-        if (module.staticSwitch.mode !== 'BYPASS' && module.inverter.status === ComponentStatus.NORMAL) {
-            return { allowed: false, reason: `INTERLOCK: ${isM1 ? 'M1' : 'M2'} STS must be in BYPASS before closing Maint. Bypass.` };
-        }
-    }
-
-    // Output breaker safety
-    if (actionType === 'BREAKER' && (target === ParallelBreakerId.Q4_1 || target === ParallelBreakerId.Q4_2) && value === true) {
-        const isM1 = target === ParallelBreakerId.Q4_1;
-        const maintBypass = isM1 ? state.breakers[ParallelBreakerId.Q3_1] : state.breakers[ParallelBreakerId.Q3_2];
-        const module = isM1 ? state.modules.module1 : state.modules.module2;
-
-        if (maintBypass && module.staticSwitch.mode === 'INVERTER') {
-            return { allowed: false, reason: `INTERLOCK: Cannot close ${isM1 ? 'Q4-1' : 'Q4-2'} while Q3 is closed and Inverter is Active.` };
-        }
+    // For breaker actions, use the controller's comprehensive interlock check
+    if (actionType === 'BREAKER') {
+        const isClosing = value === true;
+        return ParallelUPSController.checkBreakerPermission(target as ParallelBreakerId, isClosing, state);
     }
 
     return { allowed: true };

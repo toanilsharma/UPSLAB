@@ -17,6 +17,29 @@ export enum ComponentStatus {
   FAULT = 'FAULT'
 }
 
+export enum UPSMode {
+  OFF = 'OFF',
+  ONLINE = 'ONLINE',
+  BATTERY_MODE = 'BATTERY_MODE',
+  RECHARGE = 'RECHARGE',
+  STATIC_BYPASS = 'STATIC_BYPASS',
+  MAINT_BYPASS = 'MAINT_BYPASS',
+  BLACK_START = 'BLACK_START',
+  FAULT_LOCKOUT = 'FAULT_LOCKOUT',
+  EMERGENCY_SHUTDOWN = 'EMERGENCY_SHUTDOWN'
+}
+
+export enum UPSCommand {
+  RECT_ON = 'CMD_RECT_ON',
+  RECT_OFF = 'CMD_RECT_OFF',
+  INV_ON = 'CMD_INV_ON',
+  INV_OFF = 'CMD_INV_OFF',
+  TRANSFER_MAINT = 'CMD_TRANSFER_TO_MAINT',
+  RETURN_MAINT = 'CMD_RETURN_FROM_MAINT',
+  EPO = 'CMD_EPO',
+  ACK_ALARM = 'CMD_ACK_ALARM'
+}
+
 export interface ComponentDetail {
   status: ComponentStatus;
   temperature: number; // Celsius
@@ -74,6 +97,9 @@ export interface SimulationState {
   };
   // timestamp for physics delta calculations
   lastTick: number;
+
+  // New Controller State
+  upsMode: UPSMode;
 }
 
 export interface ProcedureStep {

@@ -102,7 +102,7 @@ export const TOOLTIP_CONTENT: Record<string, TooltipContent> = {
     rectifier: {
         title: 'Rectifier/Charger Module',
         description: 'Converts AC input to regulated DC voltage for the inverter and charges the battery bank.',
-        theory: 'Uses IGBT or SCR-based power electronics with PFC (Power Factor Correction) to achieve >95% efficiency and maintain DC bus at 540V nominal.',
+        theory: 'Uses IGBT or SCR-based power electronics with PFC (Power Factor Correction) to achieve >95% efficiency and maintain DC bus at 220V nominal.',
         tips: [
             'Monitor input THD to ensure clean power draw',
             'Walk-in time prevents inrush current damage',
@@ -116,7 +116,7 @@ export const TOOLTIP_CONTENT: Record<string, TooltipContent> = {
         tips: [
             'Output frequency locked to 50.00Hz ±0.01Hz',
             'Load > 80% reduces efficiency due to heat',
-            'Requires >350V DC to maintain regulation'
+            'Requires >155V DC to maintain regulation'
         ]
     },
     staticSwitch: {

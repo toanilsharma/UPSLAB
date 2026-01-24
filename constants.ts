@@ -1,4 +1,4 @@
-import { BreakerId, ComponentStatus, Procedure, SimulationState } from './types';
+import { BreakerId, ComponentStatus, Procedure, SimulationState, UPSMode } from './types';
 
 export const INITIAL_STATE: SimulationState = {
   breakers: {
@@ -11,10 +11,10 @@ export const INITIAL_STATE: SimulationState = {
     [BreakerId.Load2]: true,
   },
   voltages: {
-    utilityInput: 400,
-    bypassInput: 400,
-    dcBus: 540,
-    loadBus: 400,
+    utilityInput: 415,
+    bypassInput: 415,
+    dcBus: 220,
+    loadBus: 415,
   },
   frequencies: {
     utility: 50.0,
@@ -30,7 +30,7 @@ export const INITIAL_STATE: SimulationState = {
     chargeLevel: 100,
     temp: 25,
     health: 100,
-    voltage: 540,
+    voltage: 220,
     current: 2, // trickle charge
     cycleCount: 50, // Simulated history
     nominalCapacityAh: 100, // 100Ah VRLA battery bank
@@ -43,14 +43,14 @@ export const INITIAL_STATE: SimulationState = {
       temperature: 35,
       loadPct: 60,
       efficiency: 0.95,
-      voltageOut: 540
+      voltageOut: 220
     },
     inverter: {
       status: ComponentStatus.NORMAL,
       temperature: 48,
       loadPct: 55,
       efficiency: 0.94,
-      voltageOut: 400
+      voltageOut: 415
     },
     staticSwitch: {
       mode: 'INVERTER',
@@ -66,6 +66,7 @@ export const INITIAL_STATE: SimulationState = {
     syncDrift: false,
   },
   lastTick: 0,
+  upsMode: UPSMode.ONLINE,
 };
 
 // Procedure 1: Maintenance Bypass

@@ -76,28 +76,29 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     const b = s.breakers;
 
     // --- 1. INPUT STAGE ---
-    const utilityLive = s.voltages.utilityInput > 380;
+    const utilityLive = s.voltages.utilityInput > 400; // 415V nominal, 400V undervoltage threshold
 
     // Rectifier Physics: "Walk-in" (Soft Start) Logic
+    // First check for terminal states (FAULT or OFF)
     if (s.components.rectifier.status === ComponentStatus.FAULT) {
         s.components.rectifier.voltageOut = 0;
+    } else if (s.components.rectifier.status === ComponentStatus.OFF) {
+        // OFF but Input may be Live: Capacitors hold charge briefly then decay
+        s.components.rectifier.voltageOut = Math.max(0, s.components.rectifier.voltageOut * 0.95);
     } else if (b[BreakerId.Q1] && utilityLive) {
         if (s.components.rectifier.status === ComponentStatus.STARTING) {
             // Linear Ramp Up (Walk-in) - 5 seconds to full voltage
-            s.components.rectifier.voltageOut += 3;
-            if (s.components.rectifier.voltageOut >= 540) {
+            s.components.rectifier.voltageOut += 2;
+            if (s.components.rectifier.voltageOut >= 220) {
                 s.components.rectifier.status = ComponentStatus.NORMAL;
-                s.components.rectifier.voltageOut = 540;
+                s.components.rectifier.voltageOut = 220;
             }
         } else if (s.components.rectifier.status === ComponentStatus.NORMAL) {
             // PID Simulation: Slight fluctuation around setpoint
-            s.components.rectifier.voltageOut = 540 + (Math.sin(now / 2000) * 0.2);
-        } else {
-            // OFF but Input Live: Capacitors hold charge briefly then decay
-            s.components.rectifier.voltageOut = Math.max(0, s.components.rectifier.voltageOut * 0.95);
+            s.components.rectifier.voltageOut = 220 + (Math.sin(now / 2000) * 0.2);
         }
     } else {
-        // Input Lost: Fast Decay
+        // Input Lost: Set to OFF and Fast Decay
         s.components.rectifier.status = ComponentStatus.OFF;
         s.components.rectifier.voltageOut = Math.max(0, s.components.rectifier.voltageOut * 0.90);
     }
@@ -109,7 +110,12 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
 
     // Determine Dominant DC Source
     // Rectifier is "Stiffer" source usually set higher than float voltage
-    if (s.components.rectifier.voltageOut > 400) {
+    // CRITICAL: Rectifier must be OPERATING (not just have residual voltage) to be the DC source
+    const rectifierOperating = s.components.rectifier.status === ComponentStatus.NORMAL &&
+        b[BreakerId.Q1] &&
+        s.voltages.utilityInput > 400;
+
+    if (rectifierOperating && s.components.rectifier.voltageOut > 180) {
         busV = s.components.rectifier.voltageOut;
         dcSource = 'RECTIFIER';
     }
@@ -118,13 +124,13 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     s.currents.battery = 0;
     if (batteryConnected) {
         // Peukert-ish approximation for Open Circuit Voltage based on Charge %
-        // 100% = 540V (Float), 0% = 380V (Cutoff)
+        // 100% = 220V (Float), 0% = 155V (Cutoff) for 220V DC system
         // Non-linear curve: V drops fast at 100->90, plateaus, then drops fast 20->0
         let battCurveFactor = 1.0;
         if (s.battery.chargeLevel > 90) battCurveFactor = 1.05; // Surface charge
         else if (s.battery.chargeLevel < 20) battCurveFactor = 0.90; // Knee of curve
 
-        const battOpenCircuitV = 380 + ((s.battery.chargeLevel / 100) * (540 - 380) * battCurveFactor);
+        const battOpenCircuitV = 155 + ((s.battery.chargeLevel / 100) * (220 - 155) * battCurveFactor);
 
         if (dcSource === 'RECTIFIER') {
             // CHARGING LOGIC
@@ -169,19 +175,21 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     }
 
     // --- 3. INVERTER PHYSICS ---
-    if (s.components.inverter.status === ComponentStatus.FAULT) {
+    // First check if inverter is in a terminal state (FAULT or OFF)
+    if (s.components.inverter.status === ComponentStatus.FAULT || s.components.inverter.status === ComponentStatus.OFF) {
         s.components.inverter.voltageOut = 0;
-    } else if (s.voltages.dcBus > 350 && s.components.inverter.status !== ComponentStatus.OFF) {
-        // Inverter needs >350V DC to modulate AC
+        // Don't change status - let controller manage it
+    } else if (s.voltages.dcBus > 155) {
+        // Inverter needs >155V DC to modulate AC (220V system)
         if (s.components.inverter.status === ComponentStatus.STARTING) {
             s.components.inverter.voltageOut += 10;
             s.frequencies.inverter = 45 + (Math.random() * 2);
-            if (s.components.inverter.voltageOut >= 400) {
+            if (s.components.inverter.voltageOut >= 415) {
                 s.components.inverter.status = ComponentStatus.NORMAL;
-                s.components.inverter.voltageOut = 400;
+                s.components.inverter.voltageOut = 415;
             }
         } else {
-            s.components.inverter.voltageOut = 400 + (Math.sin(now / 1000) * 0.2);
+            s.components.inverter.voltageOut = 415 + (Math.sin(now / 1000) * 0.2);
             // Frequency drifts slightly if on Battery, locked if on Mains (PLL simulation)
             if (dcSource === 'BATTERY') {
                 s.frequencies.inverter = 50.0 + (Math.sin(now / 5000) * 0.1);
@@ -199,12 +207,17 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
             }
         }
     } else {
-        s.components.inverter.status = ComponentStatus.OFF;
+        // DC Bus too low - inverter cannot run, but don't override FAULT from controller
         s.components.inverter.voltageOut = 0;
+        // Only set to OFF if it was trying to run (STARTING or NORMAL)
+        if (s.components.inverter.status === ComponentStatus.STARTING ||
+            s.components.inverter.status === ComponentStatus.NORMAL) {
+            s.components.inverter.status = ComponentStatus.OFF;
+        }
     }
 
     // --- 4. STATIC SWITCH (STS) ---
-    const bypassLive = s.voltages.bypassInput > 360;
+    const bypassLive = s.voltages.bypassInput > 400; // 415V system
     const q2Closed = b[BreakerId.Q2];
     const bypassAvailable = bypassLive && q2Closed;
 
@@ -218,7 +231,7 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     }
     s.components.staticSwitch.syncError = syncError;
 
-    const inverterReady = s.components.inverter.status === ComponentStatus.NORMAL && s.components.inverter.voltageOut > 390;
+    const inverterReady = s.components.inverter.status === ComponentStatus.NORMAL && s.components.inverter.voltageOut > 400;
 
     // AUTO-TRANSFER LOGIC
     if (s.components.staticSwitch.mode === 'INVERTER') {
@@ -311,10 +324,25 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
             // Final effective capacity with all factors
             const finalCapacity = adjustedCapacity * sohEffect;
 
-            // Discharge rate: dCharge/dt = -(Current / Capacity) × 100%
-            // Convert Ah to percentage per tick (200ms intervals, 5 ticks/sec)
-            const dischargeRatePerTick = (dischargeCurrent / finalCapacity) * (100 / 5);
-            s.battery.chargeLevel -= dischargeRatePerTick;
+            // REALISTIC DISCHARGE CALCULATION
+            // Tick interval: 200ms = 0.2 seconds
+            // For 30 minutes backup: 30 min × 60 sec = 1800 seconds total
+            // 100Ah battery at typical 50A load: 100Ah/50A = 2 hours = 7200 seconds
+            // 
+            // Formula: ΔCharge(%) = (Current × Time) / Capacity × 100
+            // Time per tick in hours: 0.2s / 3600s = 0.0000556 hours
+            // 
+            // For SIMULATION SPEEDUP: Multiply by a time acceleration factor
+            // Real-time: factor = 1 (actual 2 hours backup at 50A)
+            // 4x speedup: factor = 4 (simulated 30 min = real 2 hour backup)
+            // 60x speedup: factor = 60 (simulated 2 min = real 2 hour backup)
+            const SIMULATION_TIME_FACTOR = 4; // 4x speedup for ~30 min training backup
+            const TICK_HOURS = 0.2 / 3600; // 200ms in hours
+
+            const dischargeAh = dischargeCurrent * TICK_HOURS * SIMULATION_TIME_FACTOR;
+            const dischargePercent = (dischargeAh / finalCapacity) * 100;
+
+            s.battery.chargeLevel -= dischargePercent;
             s.battery.chargeLevel = Math.max(0, s.battery.chargeLevel);
 
             // Track cycle count (increment by small amount each discharge tick)
@@ -329,7 +357,7 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     }
 
     s.components.inverter.loadPct = (invLoad / 120) * 100;
-    s.components.rectifier.loadPct = (rectLoad / 140) * 100;
+    s.components.rectifier.loadPct = (rectLoad / 300) * 100; // 300A rating for 220V DC system
 
     // Thermal Models
     const updateTemp = (currentTemp: number, loadPct: number, isRunning: boolean): number => {
@@ -358,7 +386,7 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     if (s.faults.dcLinkCapacitorFailure) {
         s.alarms.push('DC LINK CAPACITOR ALARM');
         // Check if ripple is causing undervoltage trips
-        if (s.voltages.dcBus < 350) {
+        if (s.voltages.dcBus < 155) {
             s.alarms.push('DC BUS UNDERVOLTAGE');
         }
     }

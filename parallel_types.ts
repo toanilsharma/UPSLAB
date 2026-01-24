@@ -20,6 +20,20 @@ export enum ParallelBreakerId {
     Load2 = 'Load2'
 }
 
+// System States per Operating Philosophy Section 2
+export enum ParallelSystemMode {
+    OFF = 'OFF',
+    ONLINE_PARALLEL = 'ONLINE_PARALLEL',
+    BATTERY_PARALLEL = 'BATTERY_PARALLEL',
+    RECHARGE_PARALLEL = 'RECHARGE_PARALLEL',
+    DEGRADED_REDUNDANCY = 'DEGRADED_REDUNDANCY',
+    STATIC_BYPASS = 'STATIC_BYPASS',
+    MAINT_BYPASS = 'MAINT_BYPASS',
+    BLACK_START_PARALLEL = 'BLACK_START_PARALLEL',
+    FAULT_LOCKOUT = 'FAULT_LOCKOUT',
+    EMERGENCY_SHUTDOWN = 'EMERGENCY_SHUTDOWN'
+}
+
 
 export enum ComponentStatus {
     OFF = 'OFF',
@@ -61,10 +75,12 @@ export interface UPSModuleState {
 }
 
 export interface ParallelSimulationState {
+    systemMode: ParallelSystemMode;
     breakers: Record<ParallelBreakerId, boolean>;
     voltages: {
         utilityInput: number;
         loadBus: number;
+        bypassInput: number;
     };
     frequencies: {
         utility: number;
@@ -78,6 +94,20 @@ export interface ParallelSimulationState {
     modules: {
         module1: UPSModuleState;
         module2: UPSModuleState;
+    };
+    // Parallel-specific fields
+    availableModules: number;
+    totalCapacityKW: number;
+    loadKW: number;
+    redundancyOK: boolean;
+    // Faults for instructor panel
+    faults: {
+        epo: boolean; // Emergency Power Off
+        mainsFailure: boolean;
+        module1RectFault: boolean;
+        module1InvFault: boolean;
+        module2RectFault: boolean;
+        module2InvFault: boolean;
     };
     alarms: string[];
     lastTick: number;
