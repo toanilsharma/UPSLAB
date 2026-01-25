@@ -140,6 +140,46 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
     const utilityInput = s.voltages.utilityInput;
     const utilityLive = utilityInput > 400; // 415V system
 
+    // --- CONTINUOUS SAFETY PROTECTION (Section 5.4) ---
+    // Rule: Never allow mixed INVERTER and BYPASS sources on the common load bus.
+    const m1InvConnected = s.modules.module1.inverter.status === ComponentStatus.NORMAL &&
+        s.modules.module1.staticSwitch.mode === 'INVERTER' &&
+        s.breakers[ParallelBreakerId.Q4_1];
+
+    const m2InvConnected = s.modules.module2.inverter.status === ComponentStatus.NORMAL &&
+        s.modules.module2.staticSwitch.mode === 'INVERTER' &&
+        s.breakers[ParallelBreakerId.Q4_2];
+
+    const m1BypassConnected = s.modules.module1.staticSwitch.mode === 'BYPASS' && s.breakers[ParallelBreakerId.Q4_1];
+    const m2BypassConnected = s.modules.module2.staticSwitch.mode === 'BYPASS' && s.breakers[ParallelBreakerId.Q4_2];
+
+    // Scenario 1: M1 is Inverter, M2 stuck on Bypass
+    if (m1InvConnected && m2BypassConnected) {
+        // Attempt to transfer M2 to Inverter
+        if (s.modules.module2.inverter.status === ComponentStatus.NORMAL && s.modules.module2.inverter.voltageOut > 400) {
+            s.modules.module2.staticSwitch.mode = 'INVERTER';
+            if (!s.alarms.includes('AUTO-SYNC: M2 TRANSFERRED TO INVERTER')) s.alarms.push('AUTO-SYNC: M2 TRANSFERRED TO INVERTER');
+        } else {
+            // If M2 cannot go to Inverter, MUST ISOLATE IT
+            s.breakers[ParallelBreakerId.Q4_2] = false;
+            if (!s.alarms.includes('SAFETY ISOLATION: M2 Q4 OPENED')) s.alarms.push('SAFETY ISOLATION: M2 Q4 OPENED to prevent short circuit');
+        }
+    }
+
+    // Scenario 2: M2 is Inverter, M1 stuck on Bypass
+    if (m2InvConnected && m1BypassConnected) {
+        // Attempt to transfer M1 to Inverter
+        if (s.modules.module1.inverter.status === ComponentStatus.NORMAL && s.modules.module1.inverter.voltageOut > 400) {
+            s.modules.module1.staticSwitch.mode = 'INVERTER';
+            if (!s.alarms.includes('AUTO-SYNC: M1 TRANSFERRED TO INVERTER')) s.alarms.push('AUTO-SYNC: M1 TRANSFERRED TO INVERTER');
+        } else {
+            // If M1 cannot go to Inverter, MUST ISOLATE IT
+            s.breakers[ParallelBreakerId.Q4_1] = false;
+            if (!s.alarms.includes('SAFETY ISOLATION: M1 Q4 OPENED')) s.alarms.push('SAFETY ISOLATION: M1 Q4 OPENED to prevent short circuit');
+        }
+    }
+    // ------------------------------------------------
+
     // --- PROCESS MODULE 1 WITH REALISTIC PHYSICS ---
     s.modules.module1 = processModule(
         s.modules.module1,
@@ -181,12 +221,21 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
         // AUTO-TRANSFER LOGIC
         if (module.staticSwitch.mode === 'INVERTER') {
             // Failover Conditions
+            // PARALLEL LOGIC FIX: Do NOT switch to bypass if the other module is holding the load
+            const loadBusEnergized = s.voltages.loadBus > 200;
+
             if (!inverterReady && bypassAvailable) {
-                module.staticSwitch.mode = 'BYPASS';
+                // Only go to bypass if the SYSTEM is losing power. 
+                // If bus is energized (by parallel peer), stay in Inverter mode (Standby/Isolating)
+                if (!loadBusEnergized) {
+                    module.staticSwitch.mode = 'BYPASS';
+                }
             }
             // Battery depletion auto-transfer
             if (module.battery.chargeLevel < 15 && bypassAvailable && !s.breakers[ParallelBreakerId.Q1_1] && !s.breakers[ParallelBreakerId.Q1_2]) {
-                module.staticSwitch.mode = 'BYPASS';
+                if (!loadBusEnergized) {
+                    module.staticSwitch.mode = 'BYPASS';
+                }
             }
         } else {
             // AUTO-RETRANSFER Logic
@@ -206,7 +255,10 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
     const load1kW = s.breakers[ParallelBreakerId.Load1] ? 60 : 0;
     const load2kW = s.breakers[ParallelBreakerId.Load2] ? 40 : 0;
     const totalLoadkW = load1kW + load2kW;
-    const loadAmps = (totalLoadkW / 0.4) * 2.5; // ~190A at full load
+
+    // Correct 3-phase current formula: I = P / (sqrt(3) * V * PF)
+    // 100kW / (1.732 * 415 * 0.9) ~= 155A
+    const loadAmps = (totalLoadkW * 1000) / (1.732 * 415 * 0.9);
 
     // Determine active modules
     const m1Active = s.modules.module1.inverter.status === ComponentStatus.NORMAL && s.breakers[ParallelBreakerId.Q4_1];
@@ -241,8 +293,9 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
 
             // Module 1 Load Assignment with Efficiency Curve
             if (sources.includes('M1')) {
-                s.modules.module1.inverter.loadPct = Math.min(100, (ampsPerModule / 120) * 100);
-                s.modules.module1.rectifier.loadPct = (ampsPerModule / 140) * 100;
+                // Rated capacity ~155A for 100kW module
+                s.modules.module1.inverter.loadPct = Math.min(100, (ampsPerModule / 155) * 100);
+                s.modules.module1.rectifier.loadPct = (ampsPerModule / 155) * 100;
 
                 // Inverter Efficiency Curve
                 const loadFactor = s.modules.module1.inverter.loadPct / 100;
@@ -253,7 +306,8 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
                     const powerRequired = (ampsPerModule * 400) / s.modules.module1.inverter.efficiency;
                     const dcAmps = powerRequired / s.modules.module1.dcBusVoltage;
                     s.modules.module1.battery.current = -dcAmps;
-                    s.modules.module1.battery.chargeLevel -= (dcAmps / 800);
+                    // Adjusted for >30min runtime: Slow down discharge rate significantly
+                    s.modules.module1.battery.chargeLevel -= (dcAmps / 5000);
                     s.modules.module1.battery.chargeLevel = Math.max(0, s.modules.module1.battery.chargeLevel);
                 }
 
@@ -268,8 +322,8 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
 
             // Module 2 Load Assignment with Efficiency Curve
             if (sources.includes('M2')) {
-                s.modules.module2.inverter.loadPct = Math.min(100, (ampsPerModule / 120) * 100);
-                s.modules.module2.rectifier.loadPct = (ampsPerModule / 140) * 100;
+                s.modules.module2.inverter.loadPct = Math.min(100, (ampsPerModule / 155) * 100);
+                s.modules.module2.rectifier.loadPct = (ampsPerModule / 155) * 100;
 
                 // Inverter Efficiency Curve
                 const loadFactor = s.modules.module2.inverter.loadPct / 100;
@@ -280,7 +334,8 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
                     const powerRequired = (ampsPerModule * 400) / s.modules.module2.inverter.efficiency;
                     const dcAmps = powerRequired / s.modules.module2.dcBusVoltage;
                     s.modules.module2.battery.current = -dcAmps;
-                    s.modules.module2.battery.chargeLevel -= (dcAmps / 800);
+                    // Adjusted for >30min runtime
+                    s.modules.module2.battery.chargeLevel -= (dcAmps / 5000);
                     s.modules.module2.battery.chargeLevel = Math.max(0, s.modules.module2.battery.chargeLevel);
                 }
 
@@ -292,16 +347,23 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
                 s.modules.module2.rectifier.loadPct = 5;
                 s.modules.module2.inverter.efficiency = 0;
             }
-        } else if (bypass1Available || bypass2Available) {
-            // On bypass mode
-            s.voltages.loadBus = utilityInput;
-            s.modules.module1.inverter.loadPct = 0;
-            s.modules.module2.inverter.loadPct = 0;
         } else {
-            // No power source available
-            s.voltages.loadBus = 0;
-            s.modules.module1.inverter.loadPct = 0;
-            s.modules.module2.inverter.loadPct = 0;
+            // Check if Bypass can energize the bus
+            // Condition: Utility is live AND (STS is in BYPASS AND Output Breaker Q4 is CLOSED) for at least one module
+            const m1BypassActive = bypass1Available && s.modules.module1.staticSwitch.mode === 'BYPASS' && s.breakers[ParallelBreakerId.Q4_1];
+            const m2BypassActive = bypass2Available && s.modules.module2.staticSwitch.mode === 'BYPASS' && s.breakers[ParallelBreakerId.Q4_2];
+
+            if (m1BypassActive || m2BypassActive) {
+                // On bypass mode
+                s.voltages.loadBus = utilityInput;
+                s.modules.module1.inverter.loadPct = 0;
+                s.modules.module2.inverter.loadPct = 0;
+            } else {
+                // No power source available
+                s.voltages.loadBus = 0;
+                s.modules.module1.inverter.loadPct = 0;
+                s.modules.module2.inverter.loadPct = 0;
+            }
         }
     }
 

@@ -223,4 +223,52 @@ export class ParallelUPSController {
     static canStartInverter(module: UPSModuleState): boolean {
         return module.dcBusVoltage > 180; // DC_OK threshold for 220V system
     }
+
+    /**
+     * Execute Manual Command with Safety Interlocks
+     */
+    static executeCommand(prevState: ParallelSimulationState, command: { type: string; target: string; action: string }): { newState: ParallelSimulationState; log: string } {
+        const state = JSON.parse(JSON.stringify(prevState)) as ParallelSimulationState;
+        let log = '';
+
+        const [modName, comp] = command.target.split('.') as ['module1' | 'module2', string];
+        const module = state.modules[modName];
+        const otherModule = modName === 'module1' ? state.modules.module2 : state.modules.module1;
+
+        // Parallel Breaker mappings
+        const myBreakerQ4 = modName === 'module1' ? state.breakers[ParallelBreakerId.Q4_1] : state.breakers[ParallelBreakerId.Q4_2];
+        const otherBreakerQ4 = modName === 'module1' ? state.breakers[ParallelBreakerId.Q4_2] : state.breakers[ParallelBreakerId.Q4_1];
+
+        if (comp === 'staticSwitch') {
+            if (command.action === 'TO_INVERTER') {
+                // SAFETY: Prevent Short Circuit if other module is on BYPASS
+                const otherOnBypass = otherModule.staticSwitch.mode === 'BYPASS' && otherBreakerQ4;
+
+                if (otherOnBypass) {
+                    return {
+                        newState: prevState,
+                        log: `ERROR: Cannot transfer ${modName} to Inverter! Short Circuit risk (Other module on Bypass)`
+                    };
+                }
+
+                if (module.inverter.status === ComponentStatus.NORMAL && module.inverter.voltageOut > 400) {
+                    module.staticSwitch.mode = 'INVERTER';
+                    module.staticSwitch.forceBypass = false;
+                    log = `Operator transferred ${modName} STS to INVERTER`;
+                } else {
+                    return { newState: prevState, log: `ERROR: ${modName} Inverter not ready` };
+                }
+            }
+            if (command.action === 'TO_BYPASS') {
+                module.staticSwitch.mode = 'BYPASS';
+                module.staticSwitch.forceBypass = true;
+                log = `Operator transferred ${modName} STS to BYPASS`;
+            }
+        }
+
+        // Add other component handlers (Rectifier, Inverter) if needed here...
+        // For now, simpler direct mutations in ParallelApp are preserved for those.
+
+        return { newState: state, log };
+    }
 }

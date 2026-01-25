@@ -108,6 +108,10 @@ export interface ParallelSimulationState {
         module1InvFault: boolean;
         module2RectFault: boolean;
         module2InvFault: boolean;
+        // IEC/IEEE Standard Faults
+        dcLinkCapacitorFailure: boolean;
+        groundFault: boolean;
+        syncDrift: boolean;
     };
     alarms: string[];
     lastTick: number;

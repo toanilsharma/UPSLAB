@@ -41,19 +41,19 @@ const SectionHeading = ({ number, title, subtitle, color = "cyan" }: any) => (
     <div className="flex items-end gap-4 mb-12 border-b border-white/10 pb-4">
         <div className={`text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-600 opacity-20`}>{number}</div>
         <div className="mb-2">
-            <h2 className="text-3xl font-bold text-white tracking-tight">{title}</h2>
-            <div className={`text-xs font-mono tracking-widest uppercase text-${color}-400`}>{subtitle}</div>
+            <h2 className="text-4xl font-black text-white tracking-tight">{title}</h2>
+            <div className={`text-sm font-bold font-mono tracking-widest uppercase text-${color}-400`}>{subtitle}</div>
         </div>
     </div>
 );
 
 const FeatureSpec = ({ label, value, detail }: any) => (
-    <div className="border-b border-white/5 py-3 group hover:bg-white/5 transition-colors px-2">
+    <div className="border-b border-white/10 py-4 group hover:bg-white/5 transition-colors px-3">
         <div className="flex justify-between items-baseline mb-1">
-            <span className="text-slate-400 text-sm font-mono">{label}</span>
-            <span className="text-cyan-300 font-bold text-sm tracking-wide">{value}</span>
+            <span className="text-slate-300 text-base font-medium font-mono">{label}</span>
+            <span className="text-cyan-300 font-bold text-lg tracking-wide">{value}</span>
         </div>
-        {detail && <div className="text-slate-500 text-[10px] leading-tight opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">{detail}</div>}
+        {detail && <div className="text-slate-400 text-xs font-medium leading-tight opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">{detail}</div>}
     </div>
 );
 
@@ -92,8 +92,8 @@ const TechCard = ({ title, subtitle, icon, features, activeColor, onClick, delay
 
                 <ul className="space-y-3 mb-8">
                     {features.map((f: string, i: number) => (
-                        <li key={i} className="flex items-start gap-3 text-slate-400 text-sm">
-                            <span className={`mt-1.5 w-1 h-1 rounded-full bg-${activeColor}-500 shadow-[0_0_5px_currentColor]`}></span>
+                        <li key={i} className="flex items-start gap-3 text-slate-300 text-base font-medium">
+                            <span className={`mt-2 w-1.5 h-1.5 rounded-full bg-${activeColor}-500 shadow-[0_0_5px_currentColor]`}></span>
                             {f}
                         </li>
                     ))}
@@ -116,6 +116,13 @@ const Launcher = () => {
         const timer = setTimeout(() => setMode('SELECT'), 2500);
         return () => clearTimeout(timer);
     }, []);
+
+    const scrollToSection = (id: string) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
 
     const WaveformCanvas = () => {
         const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -175,19 +182,21 @@ const Launcher = () => {
     if (mode === 'PARALLEL') return <ParallelApp onReturnToMenu={() => setMode('SELECT')} />;
 
     return (
-        <div className="min-h-screen w-screen bg-[#020617] text-slate-300 font-sans overflow-x-hidden selection:bg-cyan-500/30">
+        <div className="min-h-screen w-screen bg-[#020617] text-slate-200 font-sans overflow-x-hidden selection:bg-cyan-500/30">
             <CircuitBackground />
 
-            <nav className="fixed top-0 w-full z-50 bg-[#020617]/80 backdrop-blur-md border-b border-white/5">
-                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-cyan-500 rounded-sm rotate-45"></div>
-                        <span className="font-bold text-white tracking-tight text-lg">SafeOps <span className="text-cyan-400 italic">UPS</span></span>
+            <nav className="fixed top-0 w-full z-50 bg-slate-950/95 backdrop-blur-xl border-b border-cyan-500/30 shadow-2xl">
+                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-600 rounded flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                            <span className="text-black font-black text-lg">S</span>
+                        </div>
+                        <span className="font-black text-white tracking-tight text-xl">SafeOps <span className="text-cyan-400 italic">UPS</span></span>
                     </div>
-                    <div className="flex items-center gap-6 text-xs font-mono tracking-widest text-slate-500">
-                        <span className="hidden md:inline hover:text-cyan-400 cursor-pointer transition-colors">PHYSICS</span>
-                        <span className="hidden md:inline hover:text-cyan-400 cursor-pointer transition-colors">MODULES</span>
-                        <span className="px-3 py-1 bg-white/5 rounded border border-white/10 text-slate-300">V2.4 STABLE</span>
+                    <div className="flex items-center gap-8 text-sm font-bold tracking-wider text-white">
+                        <button onClick={() => scrollToSection('physics')} className="hidden md:inline hover:text-cyan-400 cursor-pointer transition-all hover:scale-105 bg-transparent border-0 p-0 shadow-none uppercase opacity-90 hover:opacity-100">Physics</button>
+                        <button onClick={() => scrollToSection('modules')} className="hidden md:inline hover:text-cyan-400 cursor-pointer transition-all hover:scale-105 bg-transparent border-0 p-0 shadow-none uppercase opacity-90 hover:opacity-100">Modules</button>
+                        <span className="px-4 py-1.5 bg-cyan-950/50 rounded-full border border-cyan-500/30 text-cyan-300 text-xs shadow-[0_0_10px_rgba(6,182,212,0.1)]">V2.4 STABLE</span>
                     </div>
                 </div>
             </nav>
@@ -198,19 +207,31 @@ const Launcher = () => {
                 <div className="grid lg:grid-cols-2 gap-16 mb-32 items-center">
                     <div>
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-                            <div className="inline-block px-3 py-1 mb-6 rounded-full bg-cyan-950/30 border border-cyan-800/50 text-cyan-400 text-[10px] font-bold tracking-[0.2em] uppercase shadow-[0_0_20px_rgba(34,211,238,0.1)]">
-                                Industrial Digital Twin
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="inline-block px-3 py-1 rounded-full bg-cyan-950/30 border border-cyan-800/50 text-cyan-400 text-[10px] font-bold tracking-[0.2em] uppercase shadow-[0_0_20px_rgba(34,211,238,0.1)]">
+                                    Industrial Digital Twin
+                                </div>
+                                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-700/50">
+                                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Engineered By</span>
+                                    <span className="text-[10px] font-black text-cyan-400 tracking-wide">ANIL SHARMA</span>
+                                </div>
                             </div>
-                            <h1 className="text-6xl md:text-7xl font-black text-white italic tracking-tighter leading-[0.9] mb-8">
+                            <h1 className="text-7xl md:text-8xl font-black text-white italic tracking-tighter leading-[0.9] mb-10 drop-shadow-2xl">
                                 Master <br />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">Power Reliability</span>
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 filter drop-shadow-lg">Power Reliability</span>
                             </h1>
-                            <p className="text-lg text-slate-400 leading-relaxed mb-10 max-w-xl border-l-2 border-slate-800 pl-6">
-                                The most advanced web-based UPS simulator. Built on a rigorous physics engine modeling
-                                <span className="text-cyan-400"> 220V DC</span> bus dynamics,
-                                <span className="text-purple-400"> IGBT</span> switching, and
-                                <span className="text-green-400"> electrochemical</span> battery states.
-                            </p>
+                            <div className="mb-10 max-w-xl border-l-4 border-cyan-500/30 pl-6 space-y-4">
+                                <p className="text-2xl text-slate-200 leading-relaxed font-medium drop-shadow-md">
+                                    <span className="text-white font-bold">Don't Fear - Learn to Operate.</span> Experience the true fidelity of a <span className="text-cyan-400 font-bold">live industrial UPS</span>.
+                                    Master complex switching, fault recovery, and parallel systems in a fearless, high-stakes simulation environment.
+                                </p>
+                                <p className="text-lg text-slate-400 leading-relaxed font-medium">
+                                    Discover the <span className="text-white font-bold">Real Features</span> of both Single & Parallel modules. Built on a rigorous physics engine modeling
+                                    <span className="text-cyan-400 font-bold"> 220V DC</span> bus dynamics,
+                                    <span className="text-purple-400 font-bold"> IGBT</span> switching, and
+                                    <span className="text-green-400 font-bold"> electrochemical</span> battery states.
+                                </p>
+                            </div>
 
                             <div className="flex flex-wrap gap-4">
                                 <button onClick={() => setMode('SINGLE')} className="px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-cyan-500/50 text-white font-bold rounded-lg transition-all flex items-center gap-2 group shadow-lg">
@@ -253,7 +274,7 @@ const Launcher = () => {
 
                 {/* PHYSICS ENGINE DEEP DIVE */}
                 {/* SIMULATION MODES - MOVED TO TOP */}
-                <section className="mb-32">
+                <section className="mb-32" id="modules">
                     <SectionHeading number="01" title="Simulation Modules" subtitle="Select Training Environment" color="purple" />
 
                     <div className="grid md:grid-cols-2 gap-8">
@@ -294,7 +315,7 @@ const Launcher = () => {
 
                 {/* SIMULATION MODES */}
                 {/* PHYSICS ENGINE DEEP DIVE */}
-                <section className="mb-32">
+                <section className="mb-32" id="physics">
                     <SectionHeading number="02" title="Physics Core Specs" subtitle="Under The Hood" />
 
                     <div className="grid md:grid-cols-3 gap-8">
@@ -377,37 +398,46 @@ const Launcher = () => {
                 </section>
 
                 {/* ENDORSEMENTS / FOOTER */}
-                <div className="mt-32 pt-16 border-t border-white/5">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+                <div className="mt-40 -mx-6 px-6 py-16 bg-slate-950 border-t border-cyan-900/50">
+                    <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
                         <div className="text-left">
-                            <h5 className="text-white font-bold mb-1">SafeOps UPS Digital Twin</h5>
-                            <div className="text-xs text-slate-500 font-mono">
-                                COMPLIANT: IEC 62040-3 • IEEE 1188 • IEEE 142
+                            <h5 className="text-2xl font-black text-white mb-2 tracking-tight">SafeOps UPS <span className="text-cyan-500 font-normal">Digital Twin</span></h5>
+                            <div className="text-base text-slate-300 font-mono tracking-wide mt-2">
+                                COMPLIANT: <span className="text-white font-bold">IEC 62040-3</span> • <span className="text-white font-bold">IEEE 1188</span> • <span className="text-white font-bold">IEEE 142</span>
                             </div>
                         </div>
 
-                        <div className="flex gap-8 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+                        <div className="flex gap-12 opacity-80 grayscale hover:grayscale-0 transition-all duration-700">
                             {/* Mock Logos for standards */}
-                            <div className="flex flex-col items-center">
-                                <span className="text-2xl font-black text-slate-300">IEC</span>
-                                <span className="text-[8px] tracking-widest">INTERNATIONAL</span>
+                            <div className="flex flex-col items-center group cursor-help">
+                                <span className="text-3xl font-black text-slate-200 group-hover:text-blue-400 transition-colors">IEC</span>
+                                <span className="text-[12px] tracking-[0.2em] font-bold text-slate-400 mt-1">INTERNATIONAL</span>
                             </div>
-                            <div className="flex flex-col items-center">
-                                <span className="text-2xl font-black text-slate-300">IEEE</span>
-                                <span className="text-[8px] tracking-widest">STANDARDS</span>
+                            <div className="flex flex-col items-center group cursor-help">
+                                <span className="text-3xl font-black text-slate-200 group-hover:text-blue-400 transition-colors">IEEE</span>
+                                <span className="text-[12px] tracking-[0.2em] font-bold text-slate-400 mt-1">STANDARDS</span>
                             </div>
                         </div>
 
                         <div className="text-right">
-                            <div className="flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-full px-4 py-2">
+                            <div className="flex items-center gap-4 bg-slate-900 border border-slate-700/50 rounded-2xl px-6 py-4 shadow-xl hover:border-cyan-500/30 transition-colors">
                                 <div className="text-right">
-                                    <div className="text-[10px] text-slate-500 uppercase tracking-wider">Created By</div>
-                                    <div className="text-sm font-bold text-cyan-400">Anil Sharma</div>
+                                    <div className="text-xs text-slate-300 uppercase tracking-wider font-bold mb-1">Engineered By</div>
+                                    <div className="text-lg font-black text-cyan-400 tracking-wide">ANIL SHARMA</div>
                                 </div>
-                                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-600 to-blue-800 border border-white/20 shadow-lg"></div>
+                                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-700 border-2 border-slate-900 shadow-lg ring-2 ring-cyan-500/20"></div>
                             </div>
-                            <div className="text-[9px] text-slate-600 mt-2 tracking-widest">ELECTRICAL RELIABILITY EXPERT</div>
+                            <div className="text-xs text-slate-400 mt-4 tracking-[0.2em] uppercase font-bold">Electrical Reliability Expert</div>
                         </div>
+                    </div>
+
+                    <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-slate-800/50 text-center">
+                        <p className="text-sm text-slate-400 leading-relaxed max-w-4xl mx-auto font-mono">
+                            DISCLAIMER: 'SafeOps UPS Digital Twin' is an educational simulation tool.
+                            References to **IEC** and **IEEE** standards indicate modeled physics behavior only.
+                            This tool is not officially affiliated with or endorsed by IEC or IEEE.
+                            Use standard site safety procedures. © 2026 Anil Sharma.
+                        </p>
                     </div>
                 </div>
 
