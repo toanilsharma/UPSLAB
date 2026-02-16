@@ -19,7 +19,7 @@ interface AppProps {
 }
 
 const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
-    const [booted, setBooted] = useState(false);
+    const [booted, setBooted] = useState(true);
     const [state, setState] = useState<SimulationState>(INITIAL_STATE);
     const [activeProcedure, setActiveProcedure] = useState<Procedure | null>(null);
     const [stepIndex, setStepIndex] = useState(0);
@@ -295,16 +295,8 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
         }
     };
 
-    // Boot Screen
-    if (!booted) return (
-        <div className="flex h-screen w-screen items-center justify-center bg-slate-950 text-slate-200">
-            <div className="w-96 text-center">
-                <div className="text-4xl font-black text-cyan-500 mb-2 tracking-tighter">DIGITAL TWIN</div>
-                <div className="text-sm font-mono text-slate-500 mb-8">INDUSTRIAL POWER SIMULATOR v2.0</div>
-                <button onClick={() => setBooted(true)} className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded shadow-lg shadow-cyan-500/30 transition-all">INITIALIZE SYSTEM</button>
-            </div>
-        </div>
-    );
+    // Boot Screen Removed
+    // if (!booted) return (...);
 
     // MAIN LAYOUT
     return (

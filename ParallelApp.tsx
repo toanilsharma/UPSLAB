@@ -15,7 +15,7 @@ interface ParallelAppProps {
 }
 
 const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
-    const [booted, setBooted] = useState(false);
+    const [booted, setBooted] = useState(true);
     const [state, setState] = useState<ParallelSimulationState>(INITIAL_PARALLEL_STATE);
     const [activeProcedure, setActiveProcedure] = useState<ParallelProcedure | null>(null);
     const [stepIndex, setStepIndex] = useState(0);
@@ -364,15 +364,8 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
         return state.modules[mod as 'module1' | 'module2'][comp as 'rectifier'];
     };
 
-    if (!booted) return (
-        <div className="flex h-screen w-screen items-center justify-center bg-slate-950 text-slate-200">
-            <div className="w-96 text-center">
-                <div className="text-4xl font-black text-cyan-500 mb-2 tracking-tighter">PARALLEL TWIN</div>
-                <div className="text-sm font-mono text-slate-500 mb-8">N+1 REDUNDANT UPS SIMULATOR</div>
-                <button onClick={() => setBooted(true)} className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded shadow-lg shadow-cyan-500/30 transition-all">INITIALIZE PARALLEL SYSTEM</button>
-            </div>
-        </div>
-    );
+    // Boot Screen Removed
+    // if (!booted) return (...);
 
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500/30">
@@ -390,12 +383,12 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                 </div>
             )}
             <div className="flex-1 flex flex-col p-0 h-full min-h-0 relative">
-                <div className="flex-none flex justify-between items-center bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b-2 border-cyan-500/30 shadow-lg z-10 px-2 py-1 h-14 relative overflow-hidden">
+                <div className="flex-none flex justify-between items-center bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b-2 border-cyan-500/30 shadow-lg z-10 px-4 py-2 h-20 relative overflow-hidden">
                     {/* Subtle animated glow effect */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent opacity-50"></div>
                     <div className="flex flex-col justify-center cursor-pointer group relative z-10 flex-shrink-0" onClick={onReturnToMenu}>
-                        <h1 className="text-base font-black italic text-white tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-400">UPS</span></h1>
-                        <div className={`text-[9px] font-mono tracking-wide ${state.systemMode === ParallelSystemMode.ONLINE_PARALLEL ? 'text-green-400' : state.systemMode === ParallelSystemMode.BATTERY_PARALLEL ? 'text-orange-400 animate-pulse' : state.systemMode === ParallelSystemMode.DEGRADED_REDUNDANCY ? 'text-yellow-400' : state.systemMode === ParallelSystemMode.EMERGENCY_SHUTDOWN ? 'text-red-500 animate-pulse' : 'text-cyan-300/70'}`}>
+                        <h1 className="text-xl font-black italic text-white tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-400">UPS</span> <span className="text-sm font-normal text-slate-400">PARALLEL</span></h1>
+                        <div className={`text-[10px] font-mono tracking-wide mt-1 ${state.systemMode === ParallelSystemMode.ONLINE_PARALLEL ? 'text-green-400' : state.systemMode === ParallelSystemMode.BATTERY_PARALLEL ? 'text-orange-400 animate-pulse' : state.systemMode === ParallelSystemMode.DEGRADED_REDUNDANCY ? 'text-yellow-400' : state.systemMode === ParallelSystemMode.EMERGENCY_SHUTDOWN ? 'text-red-500 animate-pulse' : 'text-cyan-300/70'}`}>
                             {state.systemMode.replace(/_/g, ' ')} {state.redundancyOK ? '✓' : '⚠'}
                         </div>
                     </div>
@@ -524,7 +517,7 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                     </div>
                 </div>
             </div>
-            <div className="w-56 flex-none bg-slate-900 border-l border-slate-800 shadow-xl z-20 overflow-hidden">
+            <div className="w-80 flex-none bg-slate-900 border-l border-slate-800 shadow-xl z-20 overflow-hidden">
                 <ParallelProcedurePanel
                     procedure={activeProcedure}
                     currentStepIndex={stepIndex}

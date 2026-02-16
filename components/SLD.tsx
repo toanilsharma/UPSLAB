@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { BreakerId, SimulationState, ComponentStatus } from '../types';
 
 interface SLDProps {
@@ -33,15 +34,15 @@ const IGBT = ({ size, color }: { size: number, color: string }) => (
 );
 
 const StaticSwitchInternal = ({ mode }: { mode: 'INVERTER' | 'BYPASS' }) => {
-    const activeColor = '#22d3ee';
+    const activeColor = '#22c55e'; // Green
     const inactiveColor = '#475569';
     const isBypass = mode === 'BYPASS';
 
     return (
         <g>
             {/* Labels */}
-            <text x="-12" y="-15" className="fill-slate-500 text-[9px] font-bold" textAnchor="end">BYP</text>
-            <text x="-12" y="48" className="fill-slate-500 text-[9px] font-bold" textAnchor="end">INV</text>
+            <text x="-12" y="-15" className="fill-slate-500 text-[11px] font-bold" textAnchor="end">BYP</text>
+            <text x="-12" y="48" className="fill-slate-500 text-[11px] font-bold" textAnchor="end">INV</text>
 
             {/* Bypass Path (Top to Center) */}
             <path d="M-10,-15 L15,15" stroke={isBypass ? activeColor : inactiveColor} strokeWidth={isBypass ? 4 : 2} className="transition-all duration-300" />
@@ -157,42 +158,64 @@ const LoadBox = ({ x, y, label, isSwitchedOn, isPowered }: any) => {
             )}
 
             {/* Label */}
-            <text x={0} y={15} textAnchor="middle" className={`${text} text-[9px] font-bold tracking-wider`}>{label}</text>
-            <text x={0} y={28} textAnchor="middle" className={`${text} text-[8px] font-mono`}>{isSwitchedOn ? (isPowered ? 'RUNNING' : '!! LOST !!') : 'OFF'}</text>
+            <text x={0} y={15} textAnchor="middle" className={`${text} text-[11px] font-bold tracking-wider`}>{label}</text>
+            <text x={0} y={28} textAnchor="middle" className={`${text} text-[10px] font-mono`}>{isSwitchedOn ? (isPowered ? 'RUNNING' : '!! LOST !!') : 'OFF'}</text>
         </g>
     );
 }
 
-const PowerLine = ({ d, energized, warning = false, thick = false, currentFlow }: { d: string, energized: boolean, warning?: boolean, thick?: boolean, currentFlow?: number }) => {
-    let stroke = 'stroke-slate-600';
-    let animationClass = '';
-    let opacity = 'opacity-40';
-
-    // Dynamic Animation Speed based on Amperage
-    let animSpeed = '1s';
-    if (currentFlow && currentFlow > 0) {
-        if (currentFlow > 100) animSpeed = '0.5s';
-        else if (currentFlow > 50) animSpeed = '1s';
-        else animSpeed = '2s';
-    }
-
-    if (energized) {
-        stroke = warning ? 'stroke-amber-500' : 'stroke-cyan-400';
-        animationClass = warning ? 'flow-warning' : 'flow-active';
-        opacity = 'opacity-100';
-    }
+const PowerLine = ({ d, energized, warning = false, thick = false, currentFlow, reverse = false }: { d: string, energized: boolean, warning?: boolean, thick?: boolean, currentFlow?: number, reverse?: boolean }) => {
+    const strokeWidth = thick ? 4 : 2;
+    
+    // Base Color Logic
+    // User wants: Green for energized, White for de-energized.
+    const baseColor = energized 
+        ? (warning ? '#f59e0b' : '#22c55e') // Green-500 or Orange-500
+        : '#ffffff'; // White
+        
+    const baseOpacity = energized ? 1 : 0.15; // Dim white when off
+    
+    // Flow Animation Logic
+    const isFlowing = energized && currentFlow !== undefined && currentFlow > 0;
+    const flowColor = warning ? '#fbbf24' : '#ffffff'; // White flow on Green wire looks "fantastic" (bright energy)
+    
+    // Speed
+    let duration = 2; // slow
+    if (currentFlow && currentFlow > 50) duration = 1;
+    if (currentFlow && currentFlow > 100) duration = 0.5;
 
     return (
         <>
-            <path d={d} fill="none" strokeWidth={thick ? 6 : 4} className={`${stroke} ${opacity} transition-colors duration-500`} />
-            {energized && (
-                <path
+            {/* Base Path (Static) */}
+            <path 
+                d={d} 
+                fill="none" 
+                stroke={baseColor} 
+                strokeWidth={strokeWidth} 
+                opacity={baseOpacity}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-colors duration-500"
+            />
+            
+            {/* Flow Animation (Overlay) */}
+            {isFlowing && (
+                <motion.path
                     d={d}
                     fill="none"
-                    strokeWidth={thick ? 3 : 2}
-                    className={`${stroke} ${animationClass} opacity-80`}
-                    strokeDasharray="12,12"
-                    style={{ animationDuration: animSpeed }}
+                    stroke={flowColor}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray="10, 10"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    initial={{ strokeDashoffset: 0 }}
+                    animate={{ strokeDashoffset: reverse ? [0, 20] : [0, -20] }}
+                    transition={{ 
+                        duration: duration, 
+                        repeat: Infinity, 
+                        ease: "linear" 
+                    }}
+                    style={{ opacity: 0.8 }}
                 />
             )}
         </>
@@ -205,9 +228,9 @@ const ComponentBox = ({ x, y, w, h, label, status, onClick, children, type }: an
     let bgFill = 'fill-slate-800/90';
 
     if (status === ComponentStatus.NORMAL) {
-        borderColor = 'stroke-cyan-500';
-        labelColor = 'fill-cyan-400';
-        bgFill = 'fill-cyan-900/30';
+        borderColor = 'stroke-green-500';
+        labelColor = 'fill-green-400';
+        bgFill = 'fill-green-900/30';
     } else if (status === ComponentStatus.ALARM) {
         borderColor = 'stroke-amber-500';
         labelColor = 'fill-amber-400';
@@ -224,18 +247,18 @@ const ComponentBox = ({ x, y, w, h, label, status, onClick, children, type }: an
 
     return (
         <g transform={`translate(${x}, ${y})`} onClick={() => onClick(type)} className="cursor-pointer group">
-            {status === ComponentStatus.NORMAL && <rect x={-4} y={-4} width={w + 8} height={h + 8} rx="6" className="fill-cyan-500/20 blur-md" />}
+            {status === ComponentStatus.NORMAL && <rect x={-4} y={-4} width={w + 8} height={h + 8} rx="6" className="fill-green-500/20 blur-md" />}
 
             <rect width={w} height={h} rx="6" className={`${borderColor} ${bgFill} stroke-[3px] transition-all duration-300 group-hover:stroke-white`} />
-            <text x={w / 2} y={-10} textAnchor="middle" className={`${labelColor} text-[14px] font-bold tracking-widest group-hover:fill-white`}>{label}</text>
+            <text x={w / 2} y={-12} textAnchor="middle" className={`${labelColor} text-[16px] font-bold tracking-widest group-hover:fill-white`}>{label}</text>
 
             <g transform={`translate(${w / 2 - 15}, ${h / 2 - 15})`}>
                 {children}
             </g>
 
-            <circle cx={w - 12} cy={12} r={4} className={status === ComponentStatus.NORMAL ? 'fill-cyan-400 animate-pulse' : 'fill-slate-600'} />
+            <circle cx={w - 12} cy={12} r={4} className={status === ComponentStatus.NORMAL ? 'fill-green-400 animate-pulse' : 'fill-slate-600'} />
 
-            <text x={w / 2} y={h + 15} textAnchor="middle" className="fill-white text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">CLICK TO VIEW</text>
+            <text x={w / 2} y={h + 18} textAnchor="middle" className="fill-white text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">CLICK TO VIEW</text>
         </g>
     );
 };
@@ -261,24 +284,28 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
     const outputAmps = currents.output;
     const inputAmps = outputAmps > 0 ? outputAmps + 10 : 0;
     const battAmps = Math.abs(currents.battery);
+    // Discharge if current is negative OR (Input Dead AND Inverter On AND Battery has flow)
+    // Using current sign is safest: < 0 is discharge
+    const isDischarging = currents.battery < -0.1;
+    // console.log('SLD Debug:', { battAmps, battCurrent: currents.battery, isDischarging, reverse: isDischarging });
 
     return (
         <div className="w-full h-full bg-slate-950 border border-slate-700 rounded-lg shadow-xl overflow-hidden relative select-none sld-container">
 
             {/* Instructions Overlay */}
             <div className="absolute bottom-4 left-4 bg-slate-900/90 p-3 rounded border border-slate-700 backdrop-blur pointer-events-none z-10 shadow-lg">
-                <div className="text-[10px] text-slate-500 font-bold mb-2 border-b border-slate-700 pb-1">LEGEND</div>
+                <div className="text-xs text-slate-500 font-bold mb-2 border-b border-slate-700 pb-1">LEGEND</div>
                 <div className="flex items-center gap-2 mb-1">
-                    <div className="w-3 h-3 bg-green-500 rounded-sm"></div> <span className="text-[10px] text-slate-300">BREAKER CLOSED</span>
+                    <div className="w-3 h-3 bg-green-500 rounded-sm"></div> <span className="text-[11px] text-slate-300">BREAKER CLOSED</span>
                 </div>
                 <div className="flex items-center gap-2 mb-1">
-                    <div className="w-3 h-3 bg-red-500 rounded-sm"></div> <span className="text-[10px] text-slate-300">BREAKER OPEN</span>
+                    <div className="w-3 h-3 bg-red-500 rounded-sm"></div> <span className="text-[11px] text-slate-300">BREAKER OPEN</span>
                 </div>
                 <div className="flex items-center gap-2 mb-1">
-                    <div className="w-8 h-1 bg-cyan-400"></div> <span className="text-[10px] text-slate-300">ENERGIZED</span>
+                    <div className="w-8 h-1 bg-green-400"></div> <span className="text-[11px] text-slate-300">ENERGIZED</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-1 bg-amber-500"></div> <span className="text-[10px] text-slate-300">BYPASS LINE</span>
+                    <div className="w-8 h-1 bg-amber-500"></div> <span className="text-[11px] text-slate-300">BYPASS LINE</span>
                 </div>
             </div>
 
@@ -292,16 +319,16 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
 
                 {/* --- MAINTENANCE BYPASS ZONE --- */}
                 <rect x="230" y="5" width="440" height="60" rx="8" className="fill-amber-900/5 stroke-amber-700/20 stroke-2 border-dashed" strokeDasharray="8,8" />
-                <text x="450" y="20" textAnchor="middle" className="fill-amber-600/50 text-[10px] font-bold tracking-[0.2em] uppercase">Maintenance Bypass Interlock Zone</text>
+                <text x="450" y="20" textAnchor="middle" className="fill-amber-600/50 text-[12px] font-bold tracking-[0.2em] uppercase">Maintenance Bypass Interlock Zone</text>
 
                 {/* --- POWER LINES --- */}
 
                 {/* Input Feeds */}
                 <PowerLine d="M50,140 L160,140" energized={utilityLive} warning thick currentFlow={inputAmps} />
-                <text x="50" y="125" className="fill-slate-400 text-xs font-bold">MAINS 400V</text>
+                <text x="50" y="125" className="fill-slate-400 text-sm font-bold">MAINS 400V</text>
 
                 <PowerLine d="M50,80 L160,80" energized={bypassLive} warning currentFlow={inputAmps} />
-                <text x="50" y="65" className="fill-slate-400 text-xs font-bold">BYPASS</text>
+                <text x="50" y="65" className="fill-slate-400 text-sm font-bold">BYPASS</text>
 
                 {/* Rectifier Section */}
                 <PowerLine d="M160,140 L220,140" energized={inputToRect} />
@@ -311,11 +338,11 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
                 <Node x={350} y={140} />
                 <PowerLine d="M350,140 L350,260" energized={dcBusLive} thick currentFlow={inputAmps + battAmps} />
                 <Capacitor x={350} y={180} />
-                <text x="370" y="185" className="fill-slate-400 text-xs font-bold">DC LINK</text>
+                <text x="370" y="185" className="fill-slate-400 text-sm font-bold">DC LINK</text>
 
                 {/* Battery */}
                 <Node x={350} y={260} />
-                <PowerLine d="M350,260 L350,330" energized={dcBusLive || state.battery.chargeLevel > 0} currentFlow={battAmps} />
+                <PowerLine d="M350,260 L350,330" energized={dcBusLive || state.battery.chargeLevel > 0} currentFlow={battAmps} reverse={isDischarging} />
 
                 {/* Inverter Input */}
                 <PowerLine d="M350,140 L400,140" energized={dcBusLive} currentFlow={outputAmps} />
@@ -347,11 +374,11 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
                 {/* --- COMPONENTS --- */}
 
                 <ComponentBox x={220} y={110} w={60} h={60} label="RECT" type="rectifier" status={components.rectifier.status} onClick={onComponentClick}>
-                    <DiodeBridge size={30} color={components.rectifier.status === ComponentStatus.NORMAL ? '#22d3ee' : '#94a3b8'} />
+                    <DiodeBridge size={30} color={components.rectifier.status === ComponentStatus.NORMAL ? '#22c55e' : '#94a3b8'} />
                 </ComponentBox>
 
                 <ComponentBox x={400} y={110} w={60} h={60} label="INV" type="inverter" status={components.inverter.status} onClick={onComponentClick}>
-                    <IGBT size={30} color={components.inverter.status === ComponentStatus.NORMAL ? '#22d3ee' : '#94a3b8'} />
+                    <IGBT size={30} color={components.inverter.status === ComponentStatus.NORMAL ? '#22c55e' : '#94a3b8'} />
                 </ComponentBox>
 
                 {/* Static Switch (STS) */}
@@ -362,10 +389,10 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
                 {/* Battery Visual */}
                 <g transform="translate(320, 330)">
                     <rect width="60" height="40" className="fill-slate-800 stroke-slate-500 stroke-2" />
-                    <text x="30" y="25" textAnchor="middle" className="fill-slate-300 text-xs font-bold">BATT</text>
+                    <text x="30" y="25" textAnchor="middle" className="fill-slate-300 text-sm font-bold">BATT</text>
                     <rect x="5" y="32" width={50} height="5" className="fill-slate-700" />
                     <rect x="5" y="32" width={50 * (state.battery.chargeLevel / 100)} height="5" className={`${state.battery.chargeLevel < 20 ? 'fill-red-500' : 'fill-green-500'} transition-all duration-1000`} />
-                    <text x="30" y="45" textAnchor="middle" className="fill-slate-500 text-[10px]">{state.battery.chargeLevel.toFixed(0)}%</text>
+                    <text x="30" y="45" textAnchor="middle" className="fill-slate-500 text-[12px]">{state.battery.chargeLevel.toFixed(0)}%</text>
                 </g>
 
                 <Transformer x={590} y={110} />
