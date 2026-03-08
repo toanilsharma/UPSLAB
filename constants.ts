@@ -15,6 +15,8 @@ export const INITIAL_STATE: SimulationState = {
     bypassInput: 415,
     dcBus: 220,
     loadBus: 415,
+    inverterPhase: 0,
+    bypassPhase: 0,
   },
   frequencies: {
     utility: 50.0,
@@ -25,6 +27,7 @@ export const INITIAL_STATE: SimulationState = {
     input: 100,
     battery: 2, // trickle charge
     output: 95,
+    kvar: 15,    // Initial reactive power
   },
   battery: {
     chargeLevel: 100,
@@ -36,6 +39,8 @@ export const INITIAL_STATE: SimulationState = {
     nominalCapacityAh: 100, // 100Ah VRLA battery bank
     peukertExponent: 1.15, // Typical for VRLA
     effectiveCapacityAh: 100, // Calculated dynamically
+    ri: 0.02,                 // 20 mOhms initial resistance
+    soh: 100,
   },
   components: {
     rectifier: {
@@ -43,19 +48,30 @@ export const INITIAL_STATE: SimulationState = {
       temperature: 35,
       loadPct: 60,
       efficiency: 0.95,
-      voltageOut: 220
+      voltageOut: 220,
+      kva: 65,
+      pf: 0.92,
+      thd: 1.5,
+      prechargePct: 0,
+      walkInPct: 0
     },
     inverter: {
       status: ComponentStatus.NORMAL,
       temperature: 48,
       loadPct: 55,
       efficiency: 0.94,
-      voltageOut: 415
+      voltageOut: 415,
+      kva: 60,
+      pf: 0.91,
+      thd: 0.8,
+      prechargePct: 0,
+      walkInPct: 0
     },
     staticSwitch: {
       mode: 'INVERTER',
       status: 'OK',
       syncError: 0,
+      syncStatus: 'SYNCED',
       forceBypass: false
     },
   },
@@ -221,11 +237,13 @@ export const PROC_BLACK_START: Procedure = {
       bypassInput: 0,
       dcBus: 500, // Battery holding
       loadBus: 0,
+      inverterPhase: 0,
+      bypassPhase: 0,
     },
     components: {
       rectifier: { ...INITIAL_STATE.components.rectifier, status: ComponentStatus.OFF, voltageOut: 0 },
       inverter: { ...INITIAL_STATE.components.inverter, status: ComponentStatus.OFF, voltageOut: 0 },
-      staticSwitch: { ...INITIAL_STATE.components.staticSwitch, mode: 'INVERTER', status: 'ALARM' },
+      staticSwitch: { ...INITIAL_STATE.components.staticSwitch, mode: 'INVERTER', status: 'ALARM', syncStatus: 'OUT_OF_SYNC' },
     },
     alarms: ['UTILITY FAILURE', 'LOAD LOSS'],
   },
@@ -283,11 +301,13 @@ export const PROC_COLD_START: Procedure = {
       bypassInput: 400,
       dcBus: 0,
       loadBus: 0,
+      inverterPhase: 0,
+      bypassPhase: 0,
     },
     components: {
       rectifier: { ...INITIAL_STATE.components.rectifier, status: ComponentStatus.OFF, voltageOut: 0 },
       inverter: { ...INITIAL_STATE.components.inverter, status: ComponentStatus.OFF, voltageOut: 0 },
-      staticSwitch: { ...INITIAL_STATE.components.staticSwitch, mode: 'BYPASS' },
+      staticSwitch: { ...INITIAL_STATE.components.staticSwitch, mode: 'BYPASS', syncStatus: 'SYNCED' },
     },
     alarms: ['SYSTEM SHUTDOWN'],
   },
@@ -331,9 +351,17 @@ export const PROC_EMERGENCY: Procedure = {
   name: 'Emergency Isolation (Fire)',
   description: 'Immediate isolation of UPS battery and rectifier during localized fire alarm.',
   initialState: {
-    ...INITIAL_STATE,
+    voltages: {
+      ...INITIAL_STATE.voltages,
+      inverterPhase: 0,
+      bypassPhase: 0,
+    },
     alarms: ['FIRE ALARM - BATT ROOM', 'HIGH TEMP'],
-    battery: { ...INITIAL_STATE.battery, temp: 55 }
+    battery: { ...INITIAL_STATE.battery, temp: 55 },
+    components: {
+      ...INITIAL_STATE.components,
+      staticSwitch: { ...INITIAL_STATE.components.staticSwitch, syncStatus: 'SYNCED' }
+    }
   },
   steps: [
     {
@@ -379,12 +407,17 @@ export const PROC_FAILURE_RECOVERY: Procedure = {
   description: 'Respond to Rectifier Failure alarm to prevent Battery exhaustion.',
   initialState: {
     ...INITIAL_STATE,
+    voltages: { 
+      ...INITIAL_STATE.voltages, 
+      dcBus: 500,
+      inverterPhase: 0,
+      bypassPhase: 0
+    },
     components: {
       ...INITIAL_STATE.components,
-      rectifier: { ...INITIAL_STATE.components.rectifier, status: ComponentStatus.FAULT }
+      rectifier: { ...INITIAL_STATE.components.rectifier, status: ComponentStatus.FAULT },
+      staticSwitch: { ...INITIAL_STATE.components.staticSwitch, syncStatus: 'SYNCED' }
     },
-    alarms: ['RECTIFIER FAILURE', 'BATTERY DISCHARGING'],
-    voltages: { ...INITIAL_STATE.voltages, dcBus: 500 }
   },
   steps: [
     {

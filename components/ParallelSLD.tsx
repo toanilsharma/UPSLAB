@@ -31,25 +31,74 @@ const AmpRating = ({ x, y, rating }: { x: number; y: number; rating: string }) =
     </text>
 );
 
-// Power Line - CLEAN solid lines, NO BLUR
-const PowerLine = ({ d, energized, warning = false, thick = false }: any) => {
-    const color = energized
+// Power Line with Animation and Harmonic Noise (Phase 1)
+const PowerLine = ({ d, energized, warning = false, thick = false, currentFlow = 0, reverse = false, thd = 0 }: any) => {
+    const baseColor = energized
         ? (warning ? '#f59e0b' : '#22c55e')  // Amber for bypass, Green for normal
         : '#ffffff';  // White when de-energized
         
-    const opacity = energized ? 1 : 0.15; // Dim white
+    const baseOpacity = energized ? 1 : 0.15; // Dim white
     const strokeWidth = thick ? 4 : 3;
 
+    const isFlowing = energized;
+    const flowColor = '#ffffff';
+
+    // Speed
+    let duration = 2; // slow
+    if (currentFlow && currentFlow > 50) duration = 1;
+    if (currentFlow && currentFlow > 100) duration = 0.5;
+
+    // Harmonic Noise Visualization (Phase 1)
+    // Subtle jitter/wave on the line if THD is high
+    const noiseEffect = thd > 5 ? "animate-pulse" : "";
+
     return (
-        <path
-            d={d}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity={opacity}
-        />
+        <>
+            {/* Base Path (Static) */}
+            <path 
+                d={d} 
+                fill="none" 
+                stroke={baseColor} 
+                strokeWidth={strokeWidth} 
+                opacity={baseOpacity}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`transition-colors duration-500 ${noiseEffect}`}
+            />
+            
+            {/* Flow Animation (Overlay) */}
+            {isFlowing && (
+                <motion.path
+                    d={d}
+                    fill="none"
+                    stroke={flowColor}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray="10, 10"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    initial={{ strokeDashoffset: 0 }}
+                    animate={{ strokeDashoffset: reverse ? [0, 20] : [0, -20] }}
+                    transition={{ 
+                        duration: duration, 
+                        repeat: Infinity, 
+                        ease: "linear" 
+                    }}
+                    style={{ opacity: 0.8 }}
+                />
+            )}
+            
+            {/* Harmonic Distortion Ghosting (Phase 1) */}
+            {thd > 3 && (
+                <path
+                    d={d}
+                    fill="none"
+                    stroke={baseColor}
+                    strokeWidth={strokeWidth + 2}
+                    opacity={0.15}
+                    className="animate-pulse blur-sm"
+                />
+            )}
+        </>
     );
 };
 
@@ -141,7 +190,7 @@ const Breaker = ({ id, x, y, isOpen, onClick, label, vertical = false, isEnergiz
 };
 
 // Component Box - CLEAN design
-const ComponentBox = ({ x, y, w, h, label, status, onClick, children, type }: any) => {
+const ComponentBox = ({ x, y, w, h, label, status, onClick, children, type, timer }: any) => {
     let borderColor = '#3b82f6';  // Blue default
     if (status === ComponentStatus.OFF) borderColor = '#475569';
     if (status === ComponentStatus.FAULT) borderColor = '#ef4444';
@@ -165,6 +214,11 @@ const ComponentBox = ({ x, y, w, h, label, status, onClick, children, type }: an
             >
                 {label}
             </text>
+
+            {status === ComponentStatus.STARTING && timer !== undefined && (
+                <text x={w / 2} y={h / 2 + 20} textAnchor="middle" className="fill-blue-400 text-[13px] font-mono font-bold animate-pulse">{timer.toFixed(1)}s</text>
+            )}
+
             {/* Status LED */}
             {status !== ComponentStatus.OFF && (
                 <circle
@@ -197,21 +251,16 @@ const IGBT = ({ size, color }: { size: number, color: string }) => (
 );
 
 // Static Transfer Switch Internal
-const StaticSwitchInternal = ({ mode, inFlowing, byFlowing }: { mode: 'INVERTER' | 'BYPASS', inFlowing?: boolean, byFlowing?: boolean }) => {
-    const activeColor = '#22c55e';
+const StaticSwitchInternal = ({ mode, inFlowing, byFlowing, isIsolated }: { mode: 'INVERTER' | 'BYPASS', inFlowing?: boolean, byFlowing?: boolean, isIsolated?: boolean }) => {
+    const activeColor = isIsolated ? '#ef4444' : '#22c55e'; // Red if isolated
     const inactiveColor = '#64748b';
     const isBypass = mode === 'BYPASS';
-
-    // Coordinates relative to center (525, 100). 
-    // Box is 500-550 (x), 55-145 (y).
-    // Bypass Line: y=52 -> Relative y = 52-100 = -48. Input x = 500-525 = -25.
-    // Inverter Line: y=112 -> Relative y = 112-100 = 12. Input x = -25.
-    // Output Line: y=112 -> Relative y = 12. Output x = 25.
 
     return (
         <g>
             <text x="-8" y="-40" className="fill-slate-400 text-[10px] font-bold" textAnchor="end">BYP</text>
             <text x="-8" y="8" className="fill-slate-400 text-[10px] font-bold" textAnchor="end">INV</text>
+            {isIsolated && <text x="0" y="32" className="fill-red-500 text-[9px] font-black" textAnchor="middle">BLOCKED</text>}
 
             {/* Bypass path: M-25,-48 L0,12 */}
             <path d="M-25,-48 L12,12" stroke={isBypass ? activeColor : inactiveColor} strokeWidth={isBypass ? 3 : 2} />
@@ -370,7 +419,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     <GroundSymbol x={100} y={118} />
 
                     {/* RECTIFIER */}
-                    <ComponentBox x={230} y={88} w={50} h={48} label="RECT" type="module1.rectifier" status={modules.module1.rectifier.status} onClick={onComponentClick}>
+                    <ComponentBox x={230} y={88} w={50} h={48} label="RECT" type="module1.rectifier" status={modules.module1.rectifier.status} timer={modules.module1.rectifier.startTimer} onClick={onComponentClick}>
                         <DiodeBridge size={24} color={modules.module1.rectifier.status === ComponentStatus.NORMAL ? '#22c55e' : '#64748b'} />
                     </ComponentBox>
 
@@ -407,7 +456,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     {/* INVERTER */}
                     <PowerLine d="M370,112 L420,112" energized={modules.module1.dcBusVoltage > 50} />
                     <FlowIndicator d="M370,112 L420,112" energized={modules.module1.inverter.status === ComponentStatus.NORMAL} />
-                    <ComponentBox x={420} y={88} w={50} h={48} label="INV" type="module1.inverter" status={modules.module1.inverter.status} onClick={onComponentClick}>
+                    <ComponentBox x={420} y={88} w={50} h={48} label="INV" type="module1.inverter" status={modules.module1.inverter.status} timer={modules.module1.inverter.startTimer} onClick={onComponentClick}>
                         <IGBT size={24} color={modules.module1.inverter.status === ComponentStatus.NORMAL ? '#22c55e' : '#64748b'} />
                     </ComponentBox>
 
@@ -430,13 +479,14 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     <Node x={500} y={112} />
 
                     {/* STS */}
-                    <ComponentBox x={500} y={55} w={50} h={90} label="STS" type="module1.staticSwitch" status={ComponentStatus.NORMAL} onClick={onComponentClick}>
+                    <ComponentBox x={500} y={55} w={50} h={90} label="STS" type="module1.staticSwitch" status={modules.module1.staticSwitch.isIsolated ? ComponentStatus.ALARM : ComponentStatus.NORMAL} onClick={onComponentClick}>
                         <StaticSwitchInternal 
                             mode={modules.module1.staticSwitch.mode} 
-                            // Inverter Flow: Mode is INV AND Inverter is Normal
-                            inFlowing={modules.module1.staticSwitch.mode === 'INVERTER' && modules.module1.inverter.status === ComponentStatus.NORMAL}
-                            // Bypass Flow: Mode is BYP AND Bypass is Energized (Input > 50 and Q2 is active - technically Q2 is line side, assuming available if energized)
-                            byFlowing={modules.module1.staticSwitch.mode === 'BYPASS' && voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_1]}
+                            // Inverter Flow: Mode is INV AND Inverter is Normal AND NOT Isolated
+                            inFlowing={modules.module1.staticSwitch.mode === 'INVERTER' && modules.module1.inverter.status === ComponentStatus.NORMAL && !modules.module1.staticSwitch.isIsolated}
+                            // Bypass Flow: Mode is BYP AND Bypass is Energized AND NOT Isolated
+                            byFlowing={modules.module1.staticSwitch.mode === 'BYPASS' && voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_1] && !modules.module1.staticSwitch.isIsolated}
+                            isIsolated={modules.module1.staticSwitch.isIsolated}
                         />
                     </ComponentBox>
 
@@ -505,7 +555,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     <GroundSymbol x={100} y={118} />
 
                     {/* RECTIFIER */}
-                    <ComponentBox x={230} y={88} w={50} h={48} label="RECT" type="module2.rectifier" status={modules.module2.rectifier.status} onClick={onComponentClick}>
+                    <ComponentBox x={230} y={88} w={50} h={48} label="RECT" type="module2.rectifier" status={modules.module2.rectifier.status} timer={modules.module2.rectifier.startTimer} onClick={onComponentClick}>
                         <DiodeBridge size={24} color={modules.module2.rectifier.status === ComponentStatus.NORMAL ? '#22c55e' : '#64748b'} />
                     </ComponentBox>
 
@@ -541,7 +591,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     {/* INVERTER */}
                     <PowerLine d="M370,112 L420,112" energized={modules.module2.dcBusVoltage > 50} />
                     <FlowIndicator d="M370,112 L420,112" energized={modules.module2.inverter.status === ComponentStatus.NORMAL} />
-                    <ComponentBox x={420} y={88} w={50} h={48} label="INV" type="module2.inverter" status={modules.module2.inverter.status} onClick={onComponentClick}>
+                    <ComponentBox x={420} y={88} w={50} h={48} label="INV" type="module2.inverter" status={modules.module2.inverter.status} timer={modules.module2.inverter.startTimer} onClick={onComponentClick}>
                         <IGBT size={24} color={modules.module2.inverter.status === ComponentStatus.NORMAL ? '#22c55e' : '#64748b'} />
                     </ComponentBox>
 
@@ -564,11 +614,12 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     <Node x={500} y={112} />
 
                     {/* STS */}
-                    <ComponentBox x={500} y={55} w={50} h={90} label="STS" type="module2.staticSwitch" status={ComponentStatus.NORMAL} onClick={onComponentClick}>
+                    <ComponentBox x={500} y={55} w={50} h={90} label="STS" type="module2.staticSwitch" status={modules.module2.staticSwitch.isIsolated ? ComponentStatus.ALARM : ComponentStatus.NORMAL} onClick={onComponentClick}>
                         <StaticSwitchInternal 
                              mode={modules.module2.staticSwitch.mode}
-                             inFlowing={modules.module2.staticSwitch.mode === 'INVERTER' && modules.module2.inverter.status === ComponentStatus.NORMAL}
-                             byFlowing={modules.module2.staticSwitch.mode === 'BYPASS' && voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_2]}
+                             inFlowing={modules.module2.staticSwitch.mode === 'INVERTER' && modules.module2.inverter.status === ComponentStatus.NORMAL && !modules.module2.staticSwitch.isIsolated}
+                             byFlowing={modules.module2.staticSwitch.mode === 'BYPASS' && voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_2] && !modules.module2.staticSwitch.isIsolated}
+                             isIsolated={modules.module2.staticSwitch.isIsolated}
                         />
                     </ComponentBox>
 

@@ -53,6 +53,28 @@ function calculateStateOfHealth(cycleCount: number): number {
     return Math.max(80, Math.min(100, healthPct));
 }
 
+/**
+ * Calculate Battery Internal Resistance (Ri)
+ * Ri increases as charge drops and as temperature deviates from 25°C
+ */
+function calculateInternalResistance(chargePct: number, temp: number): number {
+    const baseRi = 0.02; // 20mOhms nominal
+    const chargeFactor = 1 + Math.pow((100 - chargePct) / 100, 2) * 5; // Ri rises sharply at low charge
+    const tempFactor = 1 + Math.abs(temp - 25) * 0.02; // 2% increase per degree away from 25
+    return baseRi * chargeFactor * tempFactor;
+}
+
+/**
+ * Calculate Total Harmonic Distortion (THD)
+ * THD typically increases at light loads for most power electronics
+ */
+function calculateTHD(loadPct: number, isNonLinear: boolean): number {
+    if (loadPct <= 0) return 0;
+    const baseTHD = isNonLinear ? 5.0 : 1.5;
+    const loadFactor = 1 + (100 / (loadPct + 5)) * 0.5; // THD rises at low load (%)
+    return baseTHD * loadFactor;
+}
+
 export const calculatePowerFlow = (prevState: SimulationState): SimulationState => {
     const now = Date.now();
 
@@ -82,26 +104,56 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     // First check for terminal states (FAULT or OFF)
     if (s.components.rectifier.status === ComponentStatus.FAULT) {
         s.components.rectifier.voltageOut = 0;
+        s.components.rectifier.startTimer = undefined;
     } else if (s.components.rectifier.status === ComponentStatus.OFF) {
         // OFF but Input may be Live: Capacitors hold charge briefly then decay
         s.components.rectifier.voltageOut = Math.max(0, s.components.rectifier.voltageOut * 0.95);
+        s.components.rectifier.startTimer = undefined;
     } else if (b[BreakerId.Q1] && utilityLive) {
         if (s.components.rectifier.status === ComponentStatus.STARTING) {
-            // Linear Ramp Up (Walk-in) - 5 seconds to full voltage
-            s.components.rectifier.voltageOut += 2;
-            if (s.components.rectifier.voltageOut >= 220) {
-                s.components.rectifier.status = ComponentStatus.NORMAL;
-                s.components.rectifier.voltageOut = 220;
+            // PHASE 2: DC PRE-CHARGE & WALK-IN
+            // 1. DC Pre-charge (0-100%)
+            if ((s.components.rectifier.prechargePct || 0) < 100) {
+                s.components.rectifier.prechargePct = Math.min(100, (s.components.rectifier.prechargePct || 0) + 20); // 1 second total
+                s.components.rectifier.voltageOut = 150 * ((s.components.rectifier.prechargePct || 0) / 100);
+                s.components.rectifier.startTimer = 5; // Placeholder for pre-charge phase
+            } 
+            // 2. Rectifier Walk-in (100V -> 220V with Power Limit)
+            else {
+                s.components.rectifier.walkInPct = Math.min(100, (s.components.rectifier.walkInPct || 0) + 5); // ~4 seconds total
+                const targetV = 220;
+                const startV = 150;
+                s.components.rectifier.voltageOut = startV + (targetV - startV) * ((s.components.rectifier.walkInPct || 0) / 100);
+                
+                // Calculate remaining time
+                s.components.rectifier.startTimer = Math.ceil((100 - (s.components.rectifier.walkInPct || 0)) / 5) * 0.2;
+
+                if (s.components.rectifier.walkInPct === 100) {
+                    s.components.rectifier.status = ComponentStatus.NORMAL;
+                    s.components.rectifier.voltageOut = 220;
+                    s.components.rectifier.startTimer = 0;
+                }
             }
         } else if (s.components.rectifier.status === ComponentStatus.NORMAL) {
             // PID Simulation: Slight fluctuation around setpoint
             s.components.rectifier.voltageOut = 220 + (Math.sin(now / 2000) * 0.2);
+            s.components.rectifier.startTimer = 0;
+            s.components.rectifier.prechargePct = 100;
+            s.components.rectifier.walkInPct = 100;
         }
     } else {
         // Input Lost: Set to OFF and Fast Decay
         s.components.rectifier.status = ComponentStatus.OFF;
         s.components.rectifier.voltageOut = Math.max(0, s.components.rectifier.voltageOut * 0.90);
+        s.components.rectifier.startTimer = undefined;
+        s.components.rectifier.prechargePct = 0;
+        s.components.rectifier.walkInPct = 0;
     }
+
+    // Rectifier harmonics and PF
+    s.components.rectifier.thd = calculateTHD(s.components.rectifier.loadPct, false);
+    s.components.rectifier.pf = 0.92 + (s.components.rectifier.loadPct / 100) * 0.06; // PF improves with load
+    s.components.rectifier.kva = (s.components.rectifier.loadPct * 300 * s.voltages.utilityInput / 1000) / s.components.rectifier.pf;
 
     // --- 2. DC BUS & BATTERY PHYSICS ---
     const batteryConnected = b[BreakerId.QF1];
@@ -131,6 +183,13 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
         else if (s.battery.chargeLevel < 20) battCurveFactor = 0.90; // Knee of curve
 
         const battOpenCircuitV = 155 + ((s.battery.chargeLevel / 100) * (220 - 155) * battCurveFactor);
+        
+        // Update Internal Resistance
+        s.battery.ri = calculateInternalResistance(s.battery.chargeLevel, s.battery.temp);
+        
+        // Terminal Voltage = OCV - (I * Ri)
+        // currents.battery is positive for charge, negative for discharge
+        s.battery.voltage = battOpenCircuitV + (s.currents.battery * s.battery.ri);
 
         if (dcSource === 'RECTIFIER') {
             // CHARGING LOGIC
@@ -178,18 +237,27 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     // First check if inverter is in a terminal state (FAULT or OFF)
     if (s.components.inverter.status === ComponentStatus.FAULT || s.components.inverter.status === ComponentStatus.OFF) {
         s.components.inverter.voltageOut = 0;
+        s.components.inverter.startTimer = undefined;
         // Don't change status - let controller manage it
     } else if (s.voltages.dcBus > 155) {
         // Inverter needs >155V DC to modulate AC (220V system)
         if (s.components.inverter.status === ComponentStatus.STARTING) {
-            s.components.inverter.voltageOut += 10;
+            // Increased speed for < 8s startup
+            s.components.inverter.voltageOut += 12;
             s.frequencies.inverter = 45 + (Math.random() * 2);
+
+            // Calculate remaining time: 12V per 200ms tick. Target 415V.
+            const remainingVolts = Math.max(0, 415 - s.components.inverter.voltageOut);
+            s.components.inverter.startTimer = Math.ceil(remainingVolts / 12) * 0.2;
+
             if (s.components.inverter.voltageOut >= 415) {
                 s.components.inverter.status = ComponentStatus.NORMAL;
                 s.components.inverter.voltageOut = 415;
+                s.components.inverter.startTimer = 0;
             }
         } else {
             s.components.inverter.voltageOut = 415 + (Math.sin(now / 1000) * 0.2);
+            s.components.inverter.startTimer = 0;
             // Frequency drifts slightly if on Battery, locked if on Mains (PLL simulation)
             if (dcSource === 'BATTERY') {
                 s.frequencies.inverter = 50.0 + (Math.sin(now / 5000) * 0.1);
@@ -209,6 +277,7 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     } else {
         // DC Bus too low - inverter cannot run, but don't override FAULT from controller
         s.components.inverter.voltageOut = 0;
+        s.components.inverter.startTimer = undefined;
         // Only set to OFF if it was trying to run (STARTING or NORMAL)
         if (s.components.inverter.status === ComponentStatus.STARTING ||
             s.components.inverter.status === ComponentStatus.NORMAL) {
@@ -216,19 +285,55 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
         }
     }
 
-    // --- 4. STATIC SWITCH (STS) ---
-    const bypassLive = s.voltages.bypassInput > 400; // 415V system
-    const q2Closed = b[BreakerId.Q2];
-    const bypassAvailable = bypassLive && q2Closed;
+    // Inverter harmonics and PF
+    const isLoadNonLinear = s.breakers[BreakerId.Load1]; // Assume Load 1 (Server Rack) is non-linear
+    s.components.inverter.thd = calculateTHD(s.components.inverter.loadPct, isLoadNonLinear);
+    s.components.inverter.pf = 0.85 + (s.components.inverter.loadPct / 100) * 0.1; 
+    s.components.inverter.kva = (s.components.inverter.loadPct * 120 * 415 / 1000) / s.components.inverter.pf;
 
-    // Phase Synchronization Logic
-    // If Inverter is running and Mains is present, calculate phase error
-    const freqDiff = Math.abs(s.frequencies.inverter - s.frequencies.utility);
-    let syncError = 0;
-    if (s.components.inverter.status === ComponentStatus.NORMAL && utilityLive) {
-        // Simulated beating frequency of phase angle
-        syncError = Math.abs(Math.sin(now / 2000)) * 15;
+    // --- THERMAL FOLD-BACK (DERATING) ---
+    // If Inverter temp > 90°C, start limiting max output power to protect electronics
+    if (s.components.inverter.temperature > 90) {
+        const overheatDelta = s.components.inverter.temperature - 90;
+        const deratingFactor = Math.max(0.5, 1 - (overheatDelta * 0.05)); // Lose 5% capacity per degree
+        if (s.components.inverter.loadPct > (100 * deratingFactor)) {
+            s.alarms.push('THERMAL DERATING ACTIVE');
+            // Logic would go here to shed load or limit current
+        }
     }
+
+    // --- 4. STATIC SWITCH (STS) ---
+    // --- 4. STATIC SWITCH (STS) & PLL SYNC ---
+    const bypassAvailable = s.voltages.bypassInput > 400; // 415V system
+    const q2Closed = b[BreakerId.Q2];
+    
+    // Update Phase Angles (0-360 degrees)
+    // Formula: Angle = (Angle + (Frequency * 360 * DeltaTime)) % 360
+    const dt = 0.2; // 200ms tick
+    s.voltages.bypassPhase = (s.voltages.bypassPhase + (s.frequencies.utility * 360 * dt)) % 360;
+    
+    // Inverter PLL / Tracking Logic
+    let targetFreq = 50.0;
+    if (bypassAvailable && !s.faults.syncDrift) {
+        targetFreq = s.frequencies.utility;
+    }
+
+    // Adjust Inverter Frequency towards target (Slew rate limited)
+    const freqStep = 0.05; // 0.05 Hz per tick
+    if (s.frequencies.inverter < targetFreq) s.frequencies.inverter += freqStep;
+    if (s.frequencies.inverter > targetFreq) s.frequencies.inverter -= freqStep;
+
+    s.voltages.inverterPhase = (s.voltages.inverterPhase + (s.frequencies.inverter * 360 * dt)) % 360;
+
+    // Calculate Sync Error (Phase Displacement)
+    let syncError = Math.abs(s.voltages.inverterPhase - s.voltages.bypassPhase);
+    if (syncError > 180) syncError = 360 - syncError;
+
+    // Pulse syncStatus based on error
+    if (syncError < 2) s.components.staticSwitch.syncStatus = 'SYNCED';
+    else if (syncError < 10) s.components.staticSwitch.syncStatus = 'DRIFTING';
+    else s.components.staticSwitch.syncStatus = 'OUT_OF_SYNC';
+
     s.components.staticSwitch.syncError = syncError;
 
     const inverterReady = s.components.inverter.status === ComponentStatus.NORMAL && s.components.inverter.voltageOut > 400;
@@ -285,6 +390,12 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     const totalLoadAmps = (s.voltages.loadBus > 200) ? (load1 + load2) : 0;
 
     s.currents.output = totalLoadAmps;
+    
+    // Calculate total system reactive power (kVAr)
+    const totalKW = (totalLoadAmps * s.voltages.loadBus * Math.sqrt(3)) / 1000;
+    const sysPF = s.components.inverter.pf || 0.9;
+    const totalKVA = totalKW / sysPF;
+    s.currents.kvar = Math.sqrt(Math.pow(totalKVA, 2) - Math.pow(totalKW, 2));
 
     // --- 6. THERMAL & EFFICIENCY PHYSICS ---
     let invLoad = 0;

@@ -49,13 +49,21 @@ export interface ComponentDetail {
     loadPct: number;     // 0-100%
     efficiency: number;  // 0-1.0
     voltageOut: number;  // Local voltage reading
+    startTimer?: number; // Seconds remaining for STARTING -> NORMAL
+    kva?: number;        // Apparent Power (kVA)
+    pf?: number;         // Power Factor (0.0 - 1.0)
+    thd?: number;        // Total Harmonic Distortion (%)
+    prechargePct?: number; // DC Pre-charge progress (0-100%)
+    walkInPct?: number;    // Rectifier Walk-in progress (0-100%)
 }
 
 export interface StaticSwitchDetail {
     mode: 'INVERTER' | 'BYPASS';
     status: 'OK' | 'ALARM';
     syncError: number; // Phase difference in degrees
+    syncStatus: 'SYNCED' | 'DRIFTING' | 'OUT_OF_SYNC';
     forceBypass?: boolean; // Manual override flag
+    isIsolated?: boolean; // Electronic isolation (STS Blocked)
 }
 
 export interface BatteryDetail {
@@ -64,6 +72,8 @@ export interface BatteryDetail {
     health: number;
     voltage: number; // Terminal voltage
     current: number; // Charge (+) or discharge (-) current in Amps
+    ri: number;      // Internal Resistance (Ohms)
+    soh: number;     // State of Health (%)
 }
 
 export interface UPSModuleState {
@@ -79,8 +89,10 @@ export interface ParallelSimulationState {
     breakers: Record<ParallelBreakerId, boolean>;
     voltages: {
         utilityInput: number;
-        loadBus: number;
         bypassInput: number;
+        loadBus: number;
+        loadPhase: number;     // System output phase
+        bypassPhase: number;   // System bypass phase
     };
     frequencies: {
         utility: number;
@@ -90,6 +102,7 @@ export interface ParallelSimulationState {
         totalOutput: number;
         load1: number;
         load2: number;
+        kvar?: number;       // System-wide Reactive Power
     };
     modules: {
         module1: UPSModuleState;
@@ -97,8 +110,12 @@ export interface ParallelSimulationState {
     };
     // Parallel-specific fields
     availableModules: number;
+    effectiveCapacityAh: number;
     totalCapacityKW: number;
     loadKW: number;
+    kva: number;                // System-wide Apparent Power
+    pf: number;                 // System-wide Power Factor
+    thd: number;                // System-wide Total Harmonic Distortion (%)
     redundancyOK: boolean;
     // Faults for instructor panel
     faults: {

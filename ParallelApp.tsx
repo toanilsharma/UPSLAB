@@ -5,10 +5,14 @@ import { ParallelWaveforms } from './components/ParallelWaveforms';
 import { ParallelProcedurePanel } from './components/ParallelProcedurePanel';
 import { ParallelFaceplate } from './components/ParallelFaceplate';
 import { ParallelDashboard } from './components/ParallelDashboard';
+import { VectorDiagram } from './components/VectorDiagram';
 import { INITIAL_PARALLEL_STATE, PROC_SYSTEM_MAINT_BYPASS, PROC_MODULE_ISOLATION, PROC_MODULE_1_PM, PROC_MODULE_1_RESTORE, PROC_UTILITY_FAILURE_TEST } from './parallel_constants';
 import { calculateParallelPowerFlow, checkParallelInterlock } from './services/parallel_engine';
 import { ParallelUPSController } from './services/ParallelUPSController';
 import { ParallelSimulationState, ParallelBreakerId, ParallelProcedure, ComponentStatus, LogEntry, ParallelSystemMode } from './parallel_types';
+import { MobileNav, MobileTab } from './components/MobileNav';
+import { MobileHUD } from './components/MobileHUD';
+import { Dashboard } from './components/Dashboard'; // Using base dashboard for mobile metrics
 
 interface ParallelAppProps {
     onReturnToMenu?: () => void;
@@ -27,6 +31,9 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [autoMode, setAutoMode] = useState(true); // UPS Auto Mode - auto-recovery
     const [showFaultPanel, setShowFaultPanel] = useState(false);
+    const [activeTab, setActiveTab] = useState<'LOGS' | 'SYNC'>('LOGS');
+    const [isMobile, setIsMobile] = useState(false);
+    const [mobileTab, setMobileTab] = useState<MobileTab>('SLD');
     const logContainerRef = useRef<HTMLDivElement>(null);
 
     const addLog = (message: string, type: LogEntry['type'] = 'INFO') => {
@@ -165,6 +172,14 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
         if (newMod.module2.battery.chargeLevel < 20 && prevMod.module2.battery.chargeLevel >= 20) {
             addLog('MODULE 2: BATTERY LOW WARNING (<20%)', 'ALARM');
         }
+    }, []);
+
+    // Resize Listener
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
     useEffect(() => {
@@ -368,7 +383,25 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
     // if (!booted) return (...);
 
     return (
-        <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500/30">
+        <div className={`flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500/30 ${isMobile ? 'pt-12 pb-16' : ''}`}>
+            
+            {/* MOBILE HUD */}
+            {isMobile && (
+                <MobileHUD state={{
+                    ...state,
+                    // Map parallel state to simplified HUD interface if needed, 
+                    // or pass a partial state if MobileHUD is flexible.
+                    // For now, let's assume it takes SimulationState.
+                    // We'll use M1 as the primary HUD reference for simplicity on mobile
+                    voltages: { ...state.voltages, loadBus: state.voltages.loadBus },
+                    battery: state.modules.module1.battery,
+                    upsMode: state.systemMode as any // Cast for HUD
+                } as any} />
+            )}
+
+            {/* MOBILE NAV */}
+            {isMobile && <MobileNav activeTab={mobileTab} onTabChange={setMobileTab} />}
+
             {selectedComp && (
                 <ParallelFaceplate
                     type={selectedComp}
@@ -383,33 +416,36 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                 </div>
             )}
             <div className="flex-1 flex flex-col p-0 h-full min-h-0 relative">
-                <div className="flex-none flex justify-between items-center bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b-2 border-cyan-500/30 shadow-lg z-10 px-4 py-2 h-20 relative overflow-hidden">
-                    {/* Subtle animated glow effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent opacity-50"></div>
-                    <div className="flex flex-col justify-center cursor-pointer group relative z-10 flex-shrink-0" onClick={onReturnToMenu}>
-                        <h1 className="text-xl font-black italic text-white tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-400">UPS</span> <span className="text-sm font-normal text-slate-400">PARALLEL</span></h1>
-                        <div className={`text-[10px] font-mono tracking-wide mt-1 ${state.systemMode === ParallelSystemMode.ONLINE_PARALLEL ? 'text-green-400' : state.systemMode === ParallelSystemMode.BATTERY_PARALLEL ? 'text-orange-400 animate-pulse' : state.systemMode === ParallelSystemMode.DEGRADED_REDUNDANCY ? 'text-yellow-400' : state.systemMode === ParallelSystemMode.EMERGENCY_SHUTDOWN ? 'text-red-500 animate-pulse' : 'text-cyan-300/70'}`}>
-                            {state.systemMode.replace(/_/g, ' ')} {state.redundancyOK ? '✓' : '⚠'}
+                {/* TOP BAR - HIDDEN ON MOBILE */}
+                {!isMobile && (
+                    <div className="flex-none flex justify-between items-center bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b-2 border-cyan-500/30 shadow-lg z-10 px-4 py-2 h-20 relative overflow-hidden">
+                        {/* Subtle animated glow effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent opacity-50"></div>
+                        <div className="flex flex-col justify-center cursor-pointer group relative z-10 flex-shrink-0" onClick={onReturnToMenu}>
+                            <h1 className="text-xl font-black italic text-white tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-400">UPS</span> <span className="text-sm font-normal text-slate-400">PARALLEL</span></h1>
+                            <div className={`text-[10px] font-mono tracking-wide mt-1 ${state.systemMode === ParallelSystemMode.ONLINE_PARALLEL ? 'text-green-400' : state.systemMode === ParallelSystemMode.BATTERY_PARALLEL ? 'text-orange-400 animate-pulse' : state.systemMode === ParallelSystemMode.DEGRADED_REDUNDANCY ? 'text-yellow-400' : state.systemMode === ParallelSystemMode.EMERGENCY_SHUTDOWN ? 'text-red-500 animate-pulse' : 'text-cyan-300/70'}`}>
+                                {state.systemMode.replace(/_/g, ' ')} {state.redundancyOK ? '✓' : '⚠'}
+                            </div>
+                        </div>
+                        <div className="h-full flex-1 mx-4">
+                            <ParallelDashboard state={state} />
+                        </div>
+                        <div className="flex items-center gap-2 relative z-10 flex-shrink-0">
+                            <button onClick={() => startProcedure('')} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 border border-green-400 rounded text-xs font-bold text-white transition-colors shadow-md" title="Reset System">
+                                🔄 <span className="hidden sm:inline">RESET</span>
+                            </button>
+                            <button onClick={() => setAutoMode(!autoMode)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${autoMode ? 'bg-emerald-700 border-emerald-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title={autoMode ? 'Auto-recovery ON' : 'Manual Mode'}>
+                                ⚡ <span className="hidden sm:inline">{autoMode ? 'AUTO' : 'MANUAL'}</span>
+                            </button>
+                            <button onClick={() => setShowFaultPanel(!showFaultPanel)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${showFaultPanel ? 'bg-red-700 border-red-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title="Fault Injection Panel">
+                                🎓 <span className="hidden sm:inline">FAULTS</span>
+                            </button>
+                            <button onClick={() => { setState(prev => ({ ...prev, faults: { ...prev.faults, epo: !prev.faults.epo } })); addLog(state.faults.epo ? 'EPO Reset' : 'EPO!', 'ALARM'); }} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${state.faults.epo ? 'bg-red-600 border-red-400 text-white animate-pulse' : 'bg-red-900 border-red-700 text-red-300'}`} title="Emergency Power Off">
+                                🛑 <span className="hidden sm:inline">EPO</span>
+                            </button>
                         </div>
                     </div>
-                    <div className="h-full flex-1 mx-4">
-                        <ParallelDashboard state={state} />
-                    </div>
-                    <div className="flex items-center gap-2 relative z-10 flex-shrink-0">
-                        <button onClick={() => startProcedure('')} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 border border-green-400 rounded text-xs font-bold text-white transition-colors shadow-md" title="Reset System">
-                            🔄 <span className="hidden sm:inline">RESET</span>
-                        </button>
-                        <button onClick={() => setAutoMode(!autoMode)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${autoMode ? 'bg-emerald-700 border-emerald-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title={autoMode ? 'Auto-recovery ON' : 'Manual Mode'}>
-                            ⚡ <span className="hidden sm:inline">{autoMode ? 'AUTO' : 'MANUAL'}</span>
-                        </button>
-                        <button onClick={() => setShowFaultPanel(!showFaultPanel)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${showFaultPanel ? 'bg-red-700 border-red-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title="Fault Injection Panel">
-                            🎓 <span className="hidden sm:inline">FAULTS</span>
-                        </button>
-                        <button onClick={() => { setState(prev => ({ ...prev, faults: { ...prev.faults, epo: !prev.faults.epo } })); addLog(state.faults.epo ? 'EPO Reset' : 'EPO!', 'ALARM'); }} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${state.faults.epo ? 'bg-red-600 border-red-400 text-white animate-pulse' : 'bg-red-900 border-red-700 text-red-300'}`} title="Emergency Power Off">
-                            🛑 <span className="hidden sm:inline">EPO</span>
-                        </button>
-                    </div>
-                </div>
+                )}
 
                 {/* Fault Injection Panel */}
                 {showFaultPanel && (
@@ -487,48 +523,125 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                     </div>
                 )}
 
-                <div className="flex-1 min-h-0 relative bg-slate-900 overflow-hidden border-t border-slate-800">
-                    {/* Interactive SLD Hint Banner - Bottom left corner to avoid covering components */}
-                    <div className="absolute bottom-2 left-2 z-30 bg-slate-800/90 px-3 py-1 rounded border border-cyan-500/40 shadow-lg">
-                        <span className="text-cyan-400 text-[10px] font-bold">💡 Click switches to toggle • Click components for faceplate</span>
+                {/* MAIN CONTENT AREA: Render based on Tab (Mobile) or Grid (Desktop) */}
+                {isMobile ? (
+                    <div className="flex-1 overflow-auto">
+                        {mobileTab === 'SLD' && (
+                            <div className="h-full relative bg-slate-900 overflow-hidden">
+                                <ParallelSLD state={state} onBreakerToggle={toggleBreaker} onComponentClick={setSelectedComp} />
+                                <div className="absolute bottom-4 left-4 right-4 flex gap-2 overflow-x-auto pb-2 scrollbar-none z-10">
+                                    <button onClick={() => startProcedure('')} className="shrink-0 px-4 py-2 bg-green-600 rounded text-xs font-bold">RESET</button>
+                                    <button onClick={() => setAutoMode(!autoMode)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold ${autoMode ? 'bg-emerald-700' : 'bg-slate-700'}`}>{autoMode ? 'AUTO' : 'MANUAL'}</button>
+                                    <button onClick={() => setShowFaultPanel(true)} className="shrink-0 px-4 py-2 bg-red-700 rounded text-xs font-bold">FAULTS</button>
+                                </div>
+                            </div>
+                        )}
+                        {mobileTab === 'METRICS' && (
+                            <div className="p-4 space-y-6">
+                                <ParallelDashboard state={state} />
+                                <div className="bg-slate-900 rounded-xl p-4 border border-slate-800">
+                                    <h3 className="text-cyan-400 text-xs font-black uppercase tracking-widest mb-4">Waveforms</h3>
+                                    <div className="h-48">
+                                        <ParallelWaveforms state={state} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {mobileTab === 'LOGS' && (
+                            <div className="p-4 flex flex-col h-full gap-4">
+                                <div className="bg-slate-900 rounded-xl p-4 border border-slate-800 flex-1 flex flex-col min-h-0">
+                                    <h3 className="text-cyan-400 text-xs font-black uppercase tracking-widest mb-4">Event Log</h3>
+                                    <div className="flex-1 overflow-auto font-mono text-[11px] space-y-2">
+                                        {logs.map(l => (
+                                            <div key={l.id} className="flex gap-2 text-slate-300 border-b border-slate-800/50 pb-1">
+                                                <span className="text-slate-500 w-16 shrink-0">{l.timestamp}</span>
+                                                <span className={l.type === 'ALARM' ? 'text-red-400 font-bold' : l.type === 'ACTION' ? 'text-cyan-400' : ''}>{l.message}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="bg-slate-900 rounded-xl p-4 border border-slate-800 h-64">
+                                    <h3 className="text-cyan-400 text-xs font-black uppercase tracking-widest mb-4">Vector Sync</h3>
+                                    <div className="h-full flex items-center justify-center">
+                                        <VectorDiagram 
+                                            inverterPhase={state.voltages.loadPhase} 
+                                            bypassPhase={state.voltages.bypassPhase} 
+                                            syncStatus={state.modules.module1.staticSwitch.syncStatus}
+                                            isParallel={true}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {mobileTab === 'PROCEDURES' && (
+                            <div className="p-4">
+                                <ParallelProcedurePanel procedure={activeProcedure} currentStepIndex={stepIndex} state={state} onNextStep={nextStep} onSelectProcedure={startProcedure} completed={procedureCompleted} failedReason={failReason} mistakeCount={mistakes} />
+                            </div>
+                        )}
                     </div>
-                    <ParallelSLD
+                ) : (
+                    <>
+                        <div className="flex-1 min-h-0 relative bg-slate-900 overflow-hidden border-t border-slate-800">
+                            {/* Interactive SLD Hint Banner - Bottom left corner to avoid covering components */}
+                            <div className="absolute bottom-2 left-2 z-30 bg-slate-800/90 px-3 py-1 rounded border border-cyan-500/40 shadow-lg">
+                                <span className="text-cyan-400 text-[10px] font-bold">💡 Click switches to toggle • Click components for faceplate</span>
+                            </div>
+                            <ParallelSLD
+                                state={state}
+                                onBreakerToggle={toggleBreaker}
+                                onComponentClick={setSelectedComp}
+                            />
+                        </div>
+                        <div className="flex-none h-48 flex gap-0 border-t-2 border-cyan-500/20 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+                            <div className="w-1/2 h-full border-r border-slate-800">
+                                <ParallelWaveforms state={state} />
+                            </div>
+                            <div className="w-1/2 h-full bg-slate-900 flex flex-col">
+                                <div className="flex bg-slate-800/50 border-b border-slate-800">
+                                    <button onClick={() => setActiveTab('LOGS')} className={`flex-1 py-1 text-[10px] font-bold tracking-widest ${activeTab === 'LOGS' ? 'text-white bg-slate-700' : 'text-slate-500'}`}>EVENT LOG</button>
+                                    <button onClick={() => setActiveTab('SYNC')} className={`flex-1 py-1 text-[10px] font-bold tracking-widest ${activeTab === 'SYNC' ? 'text-white bg-slate-700' : 'text-slate-500'}`}>PHASE SYNC</button>
+                                </div>
+                                {activeTab === 'LOGS' ? (
+                                    <div className="flex-1 overflow-auto p-2 font-mono text-[10px] space-y-1" ref={logContainerRef}>
+                                        {logs.map(l => (
+                                            <div key={l.id} className="flex gap-2 text-slate-300 border-b border-slate-800/50 pb-0.5">
+                                                <span className="text-slate-500 w-14 shrink-0">{l.timestamp}</span>
+                                                <span className={l.type === 'ALARM' ? 'text-red-400 font-bold' : l.type === 'ACTION' ? 'text-cyan-400' : ''}>{l.message}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex-1 flex items-center justify-center p-2">
+                                        <VectorDiagram 
+                                            inverterPhase={state.voltages.loadPhase} 
+                                            bypassPhase={state.voltages.bypassPhase} 
+                                            syncStatus={state.modules.module1.staticSwitch.syncStatus}
+                                            title="System Vector Sync"
+                                            isParallel={true}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+            
+            {/* RIGHT COLUMN: PROCEDURES - HIDDEN ON MOBILE (Replaced by Tab) */}
+            {!isMobile && (
+                <div className="w-80 flex-none bg-slate-900 border-l border-slate-800 shadow-xl z-20 overflow-hidden">
+                    <ParallelProcedurePanel
+                        procedure={activeProcedure}
+                        currentStepIndex={stepIndex}
                         state={state}
-                        onBreakerToggle={toggleBreaker}
-                        onComponentClick={setSelectedComp}
+                        onNextStep={nextStep}
+                        onSelectProcedure={startProcedure}
+                        completed={procedureCompleted}
+                        failedReason={failReason}
+                        mistakeCount={mistakes}
                     />
                 </div>
-                <div className="flex-none h-48 flex gap-0 border-t-2 border-cyan-500/20 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
-                    <div className="w-1/2 h-full border-r border-slate-800">
-                        <ParallelWaveforms state={state} />
-                    </div>
-                    <div className="w-1/2 h-full bg-slate-900 flex flex-col">
-                        <div className="flex bg-slate-800/50 border-b border-slate-800">
-                            <span className="flex-1 py-1 text-[10px] font-bold tracking-widest text-white bg-slate-700 text-center">EVENT LOG</span>
-                        </div>
-                        <div className="flex-1 overflow-auto p-2 font-mono text-[10px] space-y-1" ref={logContainerRef}>
-                            {logs.map(l => (
-                                <div key={l.id} className="flex gap-2 text-slate-300 border-b border-slate-800/50 pb-0.5">
-                                    <span className="text-slate-500 w-14 shrink-0">{l.timestamp}</span>
-                                    <span className={l.type === 'ALARM' ? 'text-red-400 font-bold' : l.type === 'ACTION' ? 'text-cyan-400' : ''}>{l.message}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="w-80 flex-none bg-slate-900 border-l border-slate-800 shadow-xl z-20 overflow-hidden">
-                <ParallelProcedurePanel
-                    procedure={activeProcedure}
-                    currentStepIndex={stepIndex}
-                    state={state}
-                    onNextStep={nextStep}
-                    onSelectProcedure={startProcedure}
-                    completed={procedureCompleted}
-                    failedReason={failReason}
-                    mistakeCount={mistakes}
-                />
-            </div>
+            )}
         </div>
     );
 };

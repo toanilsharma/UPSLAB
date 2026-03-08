@@ -222,7 +222,7 @@ const PowerLine = ({ d, energized, warning = false, thick = false, currentFlow, 
     );
 }
 
-const ComponentBox = ({ x, y, w, h, label, status, onClick, children, type }: any) => {
+const ComponentBox = ({ x, y, w, h, label, status, onClick, children, type, timer }: any) => {
     let borderColor = 'stroke-slate-500';
     let labelColor = 'fill-slate-400';
     let bgFill = 'fill-slate-800/90';
@@ -255,6 +255,10 @@ const ComponentBox = ({ x, y, w, h, label, status, onClick, children, type }: an
             <g transform={`translate(${w / 2 - 15}, ${h / 2 - 15})`}>
                 {children}
             </g>
+
+            {status === ComponentStatus.STARTING && timer !== undefined && (
+                <text x={w / 2} y={h / 2 + 25} textAnchor="middle" className="fill-blue-400 text-[13px] font-mono font-bold animate-pulse">{timer.toFixed(1)}s</text>
+            )}
 
             <circle cx={w - 12} cy={12} r={4} className={status === ComponentStatus.NORMAL ? 'fill-green-400 animate-pulse' : 'fill-slate-600'} />
 
@@ -373,11 +377,11 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
 
                 {/* --- COMPONENTS --- */}
 
-                <ComponentBox x={220} y={110} w={60} h={60} label="RECT" type="rectifier" status={components.rectifier.status} onClick={onComponentClick}>
+                <ComponentBox x={220} y={110} w={60} h={60} label="RECT" type="rectifier" status={components.rectifier.status} timer={components.rectifier.startTimer} onClick={onComponentClick}>
                     <DiodeBridge size={30} color={components.rectifier.status === ComponentStatus.NORMAL ? '#22c55e' : '#94a3b8'} />
                 </ComponentBox>
 
-                <ComponentBox x={400} y={110} w={60} h={60} label="INV" type="inverter" status={components.inverter.status} onClick={onComponentClick}>
+                <ComponentBox x={400} y={110} w={60} h={60} label="INV" type="inverter" status={components.inverter.status} timer={components.inverter.startTimer} onClick={onComponentClick}>
                     <IGBT size={30} color={components.inverter.status === ComponentStatus.NORMAL ? '#22c55e' : '#94a3b8'} />
                 </ComponentBox>
 

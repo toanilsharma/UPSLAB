@@ -46,6 +46,12 @@ export interface ComponentDetail {
   loadPct: number;     // 0-100%
   efficiency: number;  // 0-1.0
   voltageOut: number;  // Local voltage reading
+  startTimer?: number; // Seconds remaining for STARTING -> NORMAL
+  kva?: number;        // Apparent Power (kVA)
+  pf?: number;         // Power Factor (0.0 - 1.0)
+  thd?: number;        // Total Harmonic Distortion (%)
+  prechargePct?: number; // DC Pre-charge progress (0-100%)
+  walkInPct?: number;    // Rectifier Walk-in progress (0-100%)
 }
 
 export interface SimulationState {
@@ -55,6 +61,8 @@ export interface SimulationState {
     bypassInput: number;
     dcBus: number;
     loadBus: number;
+    inverterPhase: number; // 0-360 degrees
+    bypassPhase: number;   // 0-360 degrees
   };
   frequencies: {
     utility: number;
@@ -65,6 +73,7 @@ export interface SimulationState {
     input: number;
     battery: number;
     output: number;
+    kvar?: number;       // Reactive Power (kVAr)
   };
   battery: {
     chargeLevel: number;  // 0-100% state of charge
@@ -77,6 +86,8 @@ export interface SimulationState {
     nominalCapacityAh: number;   // Nominal capacity in Amp-hours
     peukertExponent: number;     // Typically 1.05-1.3 for VRLA
     effectiveCapacityAh: number; // Calculated based on discharge rate
+    ri: number;                  // Internal Resistance (Ohms)
+    soh: number;                 // State of Health (%)
   };
   components: {
     rectifier: ComponentDetail;
@@ -85,6 +96,7 @@ export interface SimulationState {
       mode: 'INVERTER' | 'BYPASS';
       status: 'OK' | 'ALARM';
       syncError: number; // Phase difference in degrees
+      syncStatus: 'SYNCED' | 'DRIFTING' | 'OUT_OF_SYNC';
       forceBypass?: boolean; // Manual override flag
     };
   };

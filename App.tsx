@@ -4,6 +4,9 @@ import { Waveforms } from './components/Waveforms';
 import { ProcedurePanel } from './components/ProcedurePanel';
 import { Faceplate } from './components/Faceplate';
 import { Dashboard } from './components/Dashboard';
+import { VectorDiagram } from './components/VectorDiagram';
+import { MobileNav, MobileTab } from './components/MobileNav';
+import { MobileHUD } from './components/MobileHUD';
 import { TutorialOverlay, useTutorial } from './components/TutorialOverlay';
 import { AchievementPanel, AchievementToast } from './components/AchievementPanel';
 import { QuickReferenceCard } from './components/QuickReferenceCard';
@@ -37,12 +40,16 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
     const [showQuickRef, setShowQuickRef] = useState(false);
     const [autoMode, setAutoMode] = useState(true); // UPS Auto Mode - auto-recovery
 
+    // MOBILE STATE
+    const [isMobile, setIsMobile] = useState(false);
+    const [mobileTab, setMobileTab] = useState<MobileTab>('SLD');
+
     // FACEPLATE STATE
     const [selectedComp, setSelectedComp] = useState<string | null>(null);
 
     // LOGS
     const [logs, setLogs] = useState<LogEntry[]>([]);
-    const [activeTab, setActiveTab] = useState<'METRICS' | 'LOGS'>('METRICS');
+    const [activeTab, setActiveTab] = useState<'METRICS' | 'LOGS' | 'SYNC'>('METRICS');
     const logContainerRef = useRef<HTMLDivElement>(null);
 
     const addLog = (message: string, type: LogEntry['type'] = 'INFO') => {
@@ -54,6 +61,14 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
         };
         setLogs(prev => [entry, ...prev].slice(0, 100)); // Keep last 100
     };
+
+    // Resize Listener for Mobile Detection
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Simulation Tick
     useEffect(() => {
@@ -300,7 +315,13 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
 
     // MAIN LAYOUT
     return (
-        <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500/30">
+        <div className={`flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500/30 ${isMobile ? 'pt-12 pb-16' : ''}`}>
+
+            {/* MOBILE HUD */}
+            {isMobile && <MobileHUD state={state} />}
+
+            {/* MOBILE NAV */}
+            {isMobile && <MobileNav activeTab={mobileTab} onTabChange={setMobileTab} />}
 
             {/* FACEPLATE MODAL */}
             {selectedComp && (
@@ -348,35 +369,37 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
             {/* LEFT COLUMN: SIMULATION */}
             <div className="flex-1 flex flex-col p-0 h-full min-h-0 relative">
 
-                {/* Top Bar: Header & Gauges - BRIGHTER & LARGER */}
-                <div className="flex-none flex justify-between items-center bg-slate-900 border-b border-cyan-500/20 shadow-lg z-10 px-4 py-2 h-20">
-                    <div className="flex flex-col justify-center cursor-pointer group" onClick={onReturnToMenu}>
-                        <h1 className="text-xl font-black italic text-slate-100 tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-500">UPS</span> <span className="text-sm font-normal text-slate-400">SINGLE</span></h1>
-                        <div className="text-[10px] text-slate-400 font-mono tracking-widest mt-1 group-hover:text-cyan-500 transition-colors">
-                            {state.upsMode} {/* Display Mode Here */}
-                            {onReturnToMenu && ' · CLICK TO EXIT'}
+                {/* Top Bar: Header & Gauges - HIDDEN ON MOBILE (Replaced by HUD) */}
+                {!isMobile && (
+                    <div className="flex-none flex justify-between items-center bg-slate-900 border-b border-cyan-500/20 shadow-lg z-10 px-4 py-2 h-20">
+                        <div className="flex flex-col justify-center cursor-pointer group" onClick={onReturnToMenu}>
+                            <h1 className="text-xl font-black italic text-slate-100 tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-500">UPS</span> <span className="text-sm font-normal text-slate-400">SINGLE</span></h1>
+                            <div className="text-[10px] text-slate-400 font-mono tracking-widest mt-1 group-hover:text-cyan-500 transition-colors">
+                                {state.upsMode} {/* Display Mode Here */}
+                                {onReturnToMenu && ' · CLICK TO EXIT'}
+                            </div>
+                        </div>
+
+                        <div className="h-full flex-1 mx-4">
+                            <Dashboard state={state} />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => startProcedure('')} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 border border-green-400 rounded text-xs font-bold text-white transition-colors shadow-md" title="Reset UPS to normal running state">
+                                🔄 <span className="hidden sm:inline">RESET</span>
+                            </button>
+                            <button onClick={() => setAutoMode(!autoMode)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${autoMode ? 'bg-emerald-700 border-emerald-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title={autoMode ? "Auto-recovery ON: System auto-starts when power returns" : "Manual mode: You must start components manually"}>
+                                ⚡ <span className="hidden sm:inline">{autoMode ? 'AUTO' : 'MANUAL'}</span>
+                            </button>
+                            <button onClick={() => setShowQuickRef(!showQuickRef)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${showQuickRef ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title="Quick Reference Card - IEC/IEEE Thresholds">
+                                📋 <span className="hidden sm:inline">REF</span>
+                            </button>
+                            <button onClick={() => setShowInstructor(!showInstructor)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${showInstructor ? 'bg-red-700 border-red-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title="Instructor Panel - Inject Faults for Training">
+                                🎓 <span className="hidden sm:inline">FAULTS</span>
+                            </button>
                         </div>
                     </div>
-
-                    <div className="h-full flex-1 mx-4">
-                        <Dashboard state={state} />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => startProcedure('')} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 border border-green-400 rounded text-xs font-bold text-white transition-colors shadow-md" title="Reset UPS to normal running state">
-                            🔄 <span className="hidden sm:inline">RESET</span>
-                        </button>
-                        <button onClick={() => setAutoMode(!autoMode)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${autoMode ? 'bg-emerald-700 border-emerald-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title={autoMode ? "Auto-recovery ON: System auto-starts when power returns" : "Manual mode: You must start components manually"}>
-                            ⚡ <span className="hidden sm:inline">{autoMode ? 'AUTO' : 'MANUAL'}</span>
-                        </button>
-                        <button onClick={() => setShowQuickRef(!showQuickRef)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${showQuickRef ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title="Quick Reference Card - IEC/IEEE Thresholds">
-                            📋 <span className="hidden sm:inline">REF</span>
-                        </button>
-                        <button onClick={() => setShowInstructor(!showInstructor)} className={`flex items-center gap-1 px-3 py-1.5 rounded border text-xs font-bold transition-colors ${showInstructor ? 'bg-red-700 border-red-400 text-white' : 'bg-slate-700 border-slate-500 text-slate-300'}`} title="Instructor Panel - Inject Faults for Training">
-                            🎓 <span className="hidden sm:inline">FAULTS</span>
-                        </button>
-                    </div>
-                </div>
+                )}
 
                 {/* Instructor Panel */}
                 {showInstructor && (
@@ -406,80 +429,166 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
                     </div>
                 )}
 
-                {/* MAIN SLD VIEW */}
-                <div className="flex-1 min-h-0 relative bg-slate-900 overflow-hidden border-t border-slate-800">
-                    {/* Interactive SLD Hint Banner - Bottom left corner to avoid covering components */}
-                    <div className="absolute bottom-2 left-2 z-30 bg-slate-800/90 px-3 py-1 rounded border border-cyan-500/40 shadow-lg">
-                        <span className="text-cyan-400 text-[10px] font-bold">💡 Click switches to toggle • Click components for faceplate</span>
-                    </div>
-                    <SLD
-                        state={state}
-                        onBreakerToggle={toggleBreaker}
-                        onComponentClick={setSelectedComp}
-                    />
-                </div>
-
-                {/* BOTTOM PANEL: METRICS & WAVES */}
-                <div className="flex-none h-64 flex gap-0 border-t border-slate-800">
-                    <div className="w-1/2 h-full border-r border-slate-800">
-                        <Waveforms state={state} />
-                    </div>
-                    <div className="w-1/2 h-full bg-slate-900 flex flex-col">
-                        <div className="flex bg-slate-800/50 border-b border-slate-800">
-                            <button onClick={() => setActiveTab('LOGS')} className={`flex-1 py-1 text-[10px] font-bold tracking-widest ${activeTab === 'LOGS' ? 'text-white bg-slate-700' : 'text-slate-500'}`}>EVENT LOG</button>
-                            <button onClick={() => setActiveTab('METRICS')} className={`flex-1 py-1 text-[10px] font-bold tracking-widest ${activeTab === 'METRICS' ? 'text-white bg-slate-700' : 'text-slate-500'}`}>MODULE HEALTH</button>
-                        </div>
-                        {activeTab === 'LOGS' ? (
-                            <div className="flex-1 overflow-auto p-2 font-mono text-[10px] space-y-1" ref={logContainerRef}>
-                                {logs.map(l => (
-                                    <div key={l.id} className="flex gap-2 text-slate-300 border-b border-slate-800/50 pb-0.5">
-                                        <span className="text-slate-500 w-14 shrink-0">{l.timestamp}</span>
-                                        <span className={l.type === 'ALARM' ? 'text-red-400 font-bold' : l.type === 'ACTION' ? 'text-cyan-400' : ''}>{l.message}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="flex-1 p-3 grid grid-cols-2 gap-4 text-xs font-mono">
-                                <div className="flex justify-between border-b border-slate-800/50 pb-1">
-                                    <div className="text-slate-500">RECT TEMP</div>
-                                    <div className={state.components.rectifier.temperature > 60 ? 'text-orange-400' : 'text-green-400'}>{state.components.rectifier.temperature.toFixed(1)}°C</div>
-                                </div>
-                                <div className="flex justify-between border-b border-slate-800/50 pb-1">
-                                    <div className="text-slate-500">INV TEMP</div>
-                                    <div className={state.components.inverter.temperature > 60 ? 'text-orange-400' : 'text-green-400'}>{state.components.inverter.temperature.toFixed(1)}°C</div>
-                                </div>
-                                <div className="flex justify-between border-b border-slate-800/50 pb-1">
-                                    <div className="text-slate-500">SYNC PHASE</div>
-                                    <div className="text-white">{state.components.staticSwitch.syncError.toFixed(2)}°</div>
-                                </div>
-                                <div className="flex justify-between border-b border-slate-800/50 pb-1">
-                                    <div className="text-slate-500">BATT VOLT</div>
-                                    <div className="text-white">{(state.battery.chargeLevel * 4 + 100).toFixed(0)}V</div>
-                                </div>
-                                <div className="flex justify-between">
-                                    <div className="text-slate-500">EFFICIENCY</div>
-                                    <div className="text-cyan-400">{(state.components.inverter.efficiency * 100).toFixed(1)}%</div>
+                {/* MAIN CONTENT AREA: Render based on Tab (Mobile) or Grid (Desktop) */}
+                {isMobile ? (
+                    <div className="flex-1 overflow-auto">
+                        {mobileTab === 'SLD' && (
+                            <div className="h-full relative bg-slate-900 overflow-hidden">
+                                <SLD state={state} onBreakerToggle={toggleBreaker} onComponentClick={setSelectedComp} />
+                                <div className="absolute bottom-4 left-4 right-4 flex gap-2 overflow-x-auto pb-2 scrollbar-none z-10">
+                                    <button onClick={() => startProcedure('')} className="shrink-0 px-4 py-2 bg-green-600 rounded text-xs font-bold">RESET</button>
+                                    <button onClick={() => setAutoMode(!autoMode)} className={`shrink-0 px-4 py-2 rounded text-xs font-bold ${autoMode ? 'bg-emerald-700' : 'bg-slate-700'}`}>{autoMode ? 'AUTO' : 'MANUAL'}</button>
+                                    <button onClick={() => setShowQuickRef(true)} className="shrink-0 px-4 py-2 bg-cyan-700 rounded text-xs font-bold">IEC REF</button>
+                                    <button onClick={() => setShowInstructor(true)} className="shrink-0 px-4 py-2 bg-red-700 rounded text-xs font-bold">FAULTS</button>
                                 </div>
                             </div>
                         )}
+                        {mobileTab === 'METRICS' && (
+                            <div className="p-4 space-y-6">
+                                <Dashboard state={state} />
+                                <div className="bg-slate-900 rounded-xl p-4 border border-slate-800">
+                                    <h3 className="text-cyan-400 text-xs font-black uppercase tracking-widest mb-4">Module Health</h3>
+                                    <div className="grid grid-cols-2 gap-4 text-sm font-mono">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-slate-500">RECT TEMP</span>
+                                            <span className={state.components.rectifier.temperature > 60 ? 'text-orange-400' : 'text-green-400'}>{state.components.rectifier.temperature.toFixed(1)}°C</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-slate-500">INV TEMP</span>
+                                            <span className={state.components.inverter.temperature > 60 ? 'text-orange-400' : 'text-green-400'}>{state.components.inverter.temperature.toFixed(1)}°C</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-slate-500">SYNC PHASE</span>
+                                            <span className="text-white">{state.components.staticSwitch.syncError.toFixed(2)}°</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-slate-500">EFFICIENCY</span>
+                                            <span className="text-cyan-400">{(state.components.inverter.efficiency * 100).toFixed(1)}%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-slate-900 rounded-xl p-4 border border-slate-800">
+                                    <h3 className="text-cyan-400 text-xs font-black uppercase tracking-widest mb-4">Waveforms</h3>
+                                    <div className="h-48">
+                                        <Waveforms state={state} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {mobileTab === 'LOGS' && (
+                            <div className="p-4 flex flex-col h-full gap-4">
+                                <div className="bg-slate-900 rounded-xl p-4 border border-slate-800 flex-1 flex flex-col min-h-0">
+                                    <h3 className="text-cyan-400 text-xs font-black uppercase tracking-widest mb-4">Event Log</h3>
+                                    <div className="flex-1 overflow-auto font-mono text-[11px] space-y-2">
+                                        {logs.map(l => (
+                                            <div key={l.id} className="flex gap-2 text-slate-300 border-b border-slate-800/50 pb-1">
+                                                <span className="text-slate-500 w-16 shrink-0">{l.timestamp}</span>
+                                                <span className={l.type === 'ALARM' ? 'text-red-400 font-bold' : l.type === 'ACTION' ? 'text-cyan-400' : ''}>{l.message}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="bg-slate-900 rounded-xl p-4 border border-slate-800 h-64">
+                                    <h3 className="text-cyan-400 text-xs font-black uppercase tracking-widest mb-4">Vector Sync</h3>
+                                    <div className="h-full flex items-center justify-center">
+                                        <VectorDiagram inverterPhase={state.voltages.inverterPhase} bypassPhase={state.voltages.bypassPhase} syncStatus={state.components.staticSwitch.syncStatus} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {mobileTab === 'PROCEDURES' && (
+                            <div className="p-4">
+                                <ProcedurePanel procedure={activeProcedure} currentStepIndex={stepIndex} state={state} onNextStep={nextStep} onSelectProcedure={startProcedure} completed={procedureCompleted} failedReason={failReason} mistakeCount={mistakes} />
+                            </div>
+                        )}
                     </div>
-                </div>
+                ) : (
+                    <>
+                        <div className="flex-1 min-h-0 relative bg-slate-900 overflow-hidden border-t border-slate-800">
+                            {/* Interactive SLD Hint Banner - Bottom left corner to avoid covering components */}
+                            <div className="absolute bottom-2 left-2 z-30 bg-slate-800/90 px-3 py-1 rounded border border-cyan-500/40 shadow-lg">
+                                <span className="text-cyan-400 text-[10px] font-bold">💡 Click switches to toggle • Click components for faceplate</span>
+                            </div>
+                            <SLD
+                                state={state}
+                                onBreakerToggle={toggleBreaker}
+                                onComponentClick={setSelectedComp}
+                            />
+                        </div>
+
+                        {/* BOTTOM PANEL: METRICS & WAVES */}
+                        <div className="flex-none h-64 flex gap-0 border-t border-slate-800">
+                            <div className="w-1/2 h-full border-r border-slate-800">
+                                <Waveforms state={state} />
+                            </div>
+                            <div className="w-1/2 h-full bg-slate-900 flex flex-col">
+                                <div className="flex bg-slate-800/50 border-b border-slate-800">
+                                    <button onClick={() => setActiveTab('LOGS')} className={`flex-1 py-1 text-[10px] font-bold tracking-widest ${activeTab === 'LOGS' ? 'text-white bg-slate-700' : 'text-slate-500'}`}>EVENT LOG</button>
+                                    <button onClick={() => setActiveTab('METRICS')} className={`flex-1 py-1 text-[10px] font-bold tracking-widest ${activeTab === 'METRICS' ? 'text-white bg-slate-700' : 'text-slate-500'}`}>MODULE HEALTH</button>
+                                    <button onClick={() => setActiveTab('SYNC')} className={`flex-1 py-1 text-[10px] font-bold tracking-widest ${activeTab === 'SYNC' ? 'text-white bg-slate-700' : 'text-slate-500'}`}>PHASE SYNC</button>
+                                </div>
+                                {activeTab === 'LOGS' ? (
+                                    <div className="flex-1 overflow-auto p-2 font-mono text-[10px] space-y-1" ref={logContainerRef}>
+                                        {logs.map(l => (
+                                            <div key={l.id} className="flex gap-2 text-slate-300 border-b border-slate-800/50 pb-0.5">
+                                                <span className="text-slate-500 w-14 shrink-0">{l.timestamp}</span>
+                                                <span className={l.type === 'ALARM' ? 'text-red-400 font-bold' : l.type === 'ACTION' ? 'text-cyan-400' : ''}>{l.message}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : activeTab === 'METRICS' ? (
+                                    <div className="flex-1 p-3 grid grid-cols-2 gap-4 text-xs font-mono">
+                                        <div className="flex justify-between border-b border-slate-800/50 pb-1">
+                                            <div className="text-slate-500">RECT TEMP</div>
+                                            <div className={state.components.rectifier.temperature > 60 ? 'text-orange-400' : 'text-green-400'}>{state.components.rectifier.temperature.toFixed(1)}°C</div>
+                                        </div>
+                                        <div className="flex justify-between border-b border-slate-800/50 pb-1">
+                                            <div className="text-slate-500">INV TEMP</div>
+                                            <div className={state.components.inverter.temperature > 60 ? 'text-orange-400' : 'text-green-400'}>{state.components.inverter.temperature.toFixed(1)}°C</div>
+                                        </div>
+                                        <div className="flex justify-between border-b border-slate-800/50 pb-1">
+                                            <div className="text-slate-500">SYNC PHASE</div>
+                                            <div className="text-white">{state.components.staticSwitch.syncError.toFixed(2)}°</div>
+                                        </div>
+                                        <div className="flex justify-between border-b border-slate-800/50 pb-1">
+                                            <div className="text-slate-500">BATT VOLT</div>
+                                            <div className="text-white">{(state.battery.chargeLevel * 4 + 100).toFixed(0)}V</div>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <div className="text-slate-500">EFFICIENCY</div>
+                                            <div className="text-cyan-400">{(state.components.inverter.efficiency * 100).toFixed(1)}%</div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex-1 flex items-center justify-center p-2">
+                                        <VectorDiagram 
+                                            inverterPhase={state.voltages.inverterPhase} 
+                                            bypassPhase={state.voltages.bypassPhase} 
+                                            syncStatus={state.components.staticSwitch.syncStatus}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
-            {/* RIGHT COLUMN: PROCEDURES */}
-            {/* Reduced width to w-72 */}
-            <div className="w-80 flex-none bg-slate-900 border-l border-slate-800 shadow-xl z-20">
-                <ProcedurePanel
-                    procedure={activeProcedure}
-                    currentStepIndex={stepIndex}
-                    state={state}
-                    onNextStep={nextStep}
-                    onSelectProcedure={startProcedure}
-                    completed={procedureCompleted}
-                    failedReason={failReason}
-                    mistakeCount={mistakes}
-                />
-            </div>
+            {/* RIGHT COLUMN: PROCEDURES - HIDDEN ON MOBILE (Replaced by Tab) */}
+            {!isMobile && (
+                <div className="w-80 flex-none bg-slate-900 border-l border-slate-800 shadow-xl z-20">
+                    <ProcedurePanel
+                        procedure={activeProcedure}
+                        currentStepIndex={stepIndex}
+                        state={state}
+                        onNextStep={nextStep}
+                        onSelectProcedure={startProcedure}
+                        completed={procedureCompleted}
+                        failedReason={failReason}
+                        mistakeCount={mistakes}
+                    />
+                </div>
+            )}
         </div>
     );
 };

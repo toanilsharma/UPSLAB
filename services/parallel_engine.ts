@@ -6,39 +6,84 @@ const AMBIENT_TEMP = 22; // Server room temperature
 const THERMAL_MASS = 0.08; // Realistic slow heating
 const COOLING_FACTOR = 0.015;
 
+/**
+ * Calculate Battery Internal Resistance (Ri)
+ * Ri increases as charge drops and as temperature deviates from 25°C
+ */
+function calculateInternalResistance(chargePct: number, temp: number): number {
+    const baseRi = 0.015; // 15mOhms nominal for larger parallel string
+    const chargeFactor = 1 + Math.pow((100 - chargePct) / 100, 2) * 4;
+    const tempFactor = 1 + Math.abs(temp - 25) * 0.015;
+    return baseRi * chargeFactor * tempFactor;
+}
+
+/**
+ * Calculate Total Harmonic Distortion (THD)
+ */
+function calculateTHD(loadPct: number, isNonLinear: boolean): number {
+    if (loadPct <= 0) return 0;
+    const baseTHD = isNonLinear ? 4.5 : 1.2;
+    const loadFactor = 1 + (100 / (loadPct + 5)) * 0.4;
+    return baseTHD * loadFactor;
+}
+
 // Process a single module with realistic physics (ported from single module)
-const processModule = (
+function processModule(
     moduleState: UPSModuleState,
     utilityInput: number,
     breakers: { mainInput: boolean; bypassInput: boolean; batteryBreaker: boolean; output: boolean },
+    loadAmps: number,
+    isLoadNonLinear: boolean,
     now: number,
     dcSource: 'RECT' | 'BATTERY' | 'NONE'
-): UPSModuleState => {
+): UPSModuleState {
     const module = JSON.parse(JSON.stringify(moduleState)) as UPSModuleState;
 
     // --- 1. RECTIFIER PHYSICS: "Walk-in" (Soft Start) Logic ---
     if (module.rectifier.status === ComponentStatus.FAULT) {
         module.rectifier.voltageOut = 0;
+        module.rectifier.startTimer = undefined;
     } else if (breakers.mainInput && utilityInput > 400) {
         if (module.rectifier.status === ComponentStatus.STARTING) {
-            // Linear Ramp Up (Walk-in) - 5 seconds to full voltage
-            module.rectifier.voltageOut += 2;
-            if (module.rectifier.voltageOut >= 220) {
-                module.rectifier.status = ComponentStatus.NORMAL;
-                module.rectifier.voltageOut = 220;
+            // PHASE 2: DC PRE-CHARGE & WALK-IN
+            if ((module.rectifier.prechargePct || 0) < 100) {
+                module.rectifier.prechargePct = Math.min(100, (module.rectifier.prechargePct || 0) + 20);
+                module.rectifier.voltageOut = 150 * ((module.rectifier.prechargePct || 0) / 100);
+                module.rectifier.startTimer = 5;
+            } else {
+                module.rectifier.walkInPct = Math.min(100, (module.rectifier.walkInPct || 0) + 5);
+                const targetV = 220;
+                const startV = 150;
+                module.rectifier.voltageOut = startV + (targetV - startV) * ((module.rectifier.walkInPct || 0) / 100);
+                module.rectifier.startTimer = Math.ceil((100 - (module.rectifier.walkInPct || 0)) / 5) * 0.2;
+
+                if (module.rectifier.walkInPct === 100) {
+                    module.rectifier.status = ComponentStatus.NORMAL;
+                    module.rectifier.voltageOut = 220;
+                    module.rectifier.startTimer = 0;
+                }
             }
         } else if (module.rectifier.status === ComponentStatus.NORMAL) {
-            // PID Simulation: Slight fluctuation around setpoint
             module.rectifier.voltageOut = 220 + (Math.sin(now / 2000) * 0.2);
+            module.rectifier.startTimer = 0;
+            module.rectifier.prechargePct = 100;
+            module.rectifier.walkInPct = 100;
         } else {
             // OFF but Input Live: Capacitors hold charge briefly then decay
             module.rectifier.voltageOut = Math.max(0, module.rectifier.voltageOut * 0.95);
+            module.rectifier.startTimer = undefined;
         }
     } else {
         // Input Lost: Fast Decay
         module.rectifier.status = ComponentStatus.OFF;
         module.rectifier.voltageOut = Math.max(0, module.rectifier.voltageOut * 0.90);
+        module.rectifier.startTimer = undefined;
     }
+
+    // Rectifier harmonics and PF
+    module.rectifier.thd = calculateTHD(module.rectifier.loadPct, false);
+    module.rectifier.pf = 0.94 + (module.rectifier.loadPct / 100) * 0.05;
+    module.rectifier.kva = (module.rectifier.loadPct * 300 * utilityInput / 1000) / module.rectifier.pf;
 
     // --- 2. DC BUS & BATTERY PHYSICS ---
     let busV = 0;
@@ -58,6 +103,14 @@ const processModule = (
         else if (module.battery.chargeLevel < 20) battCurveFactor = 0.90; // Knee of curve
 
         const battOpenCircuitV = 155 + ((module.battery.chargeLevel / 100) * (220 - 155) * battCurveFactor);
+
+        // Update Internal Resistance
+        module.battery.ri = calculateInternalResistance(module.battery.chargeLevel, module.battery.temp);
+
+        // Terminal Voltage = OCV - (I * Ri)
+        // currents.battery is positive for charge, negative for discharge
+        const battCurrent = module.rectifier.status === ComponentStatus.NORMAL ? 5 : -loadAmps; // Simplified for processModule
+        module.battery.voltage = battOpenCircuitV + (battCurrent * module.battery.ri);
 
         if (dcSource === 'RECT') {
             // CHARGING LOGIC
@@ -95,24 +148,39 @@ const processModule = (
     // --- 3. INVERTER PHYSICS ---
     if (module.inverter.status === ComponentStatus.FAULT) {
         module.inverter.voltageOut = 0;
+        module.inverter.startTimer = undefined;
     } else if (module.dcBusVoltage > 155 && module.inverter.status !== ComponentStatus.OFF) {
         // Inverter needs >155V DC to modulate AC (220V system)
         if (module.inverter.status === ComponentStatus.STARTING) {
-            module.inverter.voltageOut += 10;
+            // Increased speed for < 8s startup
+            module.inverter.voltageOut += 12;
+
+            // Calculate remaining time: 12V per 200ms tick. Target 415V.
+            const remainingVolts = Math.max(0, 415 - module.inverter.voltageOut);
+            module.inverter.startTimer = Math.ceil(remainingVolts / 12) * 0.2;
+
             if (module.inverter.voltageOut >= 415) {
                 module.inverter.status = ComponentStatus.NORMAL;
                 module.inverter.voltageOut = 415;
+                module.inverter.startTimer = 0;
             }
         } else {
             module.inverter.voltageOut = 415 + (Math.sin(now / 1000) * 0.2);
+            module.inverter.startTimer = 0;
         }
     } else {
         module.inverter.status = ComponentStatus.OFF;
         module.inverter.voltageOut = 0;
+        module.inverter.startTimer = undefined;
     }
 
+    // Inverter harmonics and PF
+    module.inverter.thd = calculateTHD(module.inverter.loadPct, isLoadNonLinear);
+    module.inverter.pf = 0.88 + (module.inverter.loadPct / 100) * 0.1;
+    module.inverter.kva = (module.inverter.loadPct * 120 * 415 / 1000) / module.inverter.pf;
+
     return module;
-};
+}
 
 export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): ParallelSimulationState => {
     const now = Date.now();
@@ -180,30 +248,77 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
     }
     // ------------------------------------------------
 
-    // --- PROCESS MODULE 1 WITH REALISTIC PHYSICS ---
+    // --- LOAD CALCULATION & SHARING ---
+    const load1kW = s.breakers[ParallelBreakerId.Load1] ? 60 : 0;
+    const load2kW = s.breakers[ParallelBreakerId.Load2] ? 40 : 0;
+    const totalLoadkW = load1kW + load2kW;
+    s.loadKW = totalLoadkW; // Update system load KW
+
+    // Correct 3-phase current formula: I = P / (sqrt(3) * V * PF)
+    const totalLoadAmps = (totalLoadkW * 1000) / (1.732 * 415 * 0.9);
+
+    // --- PHASE & SYNC PHYSICS (Phase 3) ---
+    const dt = 0.2; // 200ms
+    s.voltages.bypassPhase = (s.voltages.bypassPhase + (s.frequencies.utility * 360 * dt)) % 360;
+
+    const processSync = (module: UPSModuleState) => {
+        const bypassAvailable = s.voltages.bypassInput > 400;
+        let targetFreq = 50.0;
+        if (bypassAvailable && !s.faults.syncDrift) targetFreq = s.frequencies.utility;
+
+        // PLL Frequency adjustment
+        const currentFreq = 50.0; // In a real system this would be tracked per module
+        module.staticSwitch.syncError = Math.abs(s.voltages.loadPhase - s.voltages.bypassPhase);
+        if (module.staticSwitch.syncError > 180) module.staticSwitch.syncError = 360 - module.staticSwitch.syncError;
+        
+        if (module.staticSwitch.syncError < 2) module.staticSwitch.syncStatus = 'SYNCED';
+        else if (module.staticSwitch.syncError < 10) module.staticSwitch.syncStatus = 'DRIFTING';
+        else module.staticSwitch.syncStatus = 'OUT_OF_SYNC';
+    };
+
+    processSync(s.modules.module1);
+    processSync(s.modules.module2);
+    
+    // Update system load phase (Simplified: follows utility if bypass, else follows master inverter)
+    s.voltages.loadPhase = (s.voltages.loadPhase + (s.frequencies.load * 360 * dt)) % 360;
+
+    // Determine active modules and bypass status
+    const m1Active = s.modules.module1.inverter.status === ComponentStatus.NORMAL && s.breakers[ParallelBreakerId.Q4_1] && !s.modules.module1.staticSwitch.isIsolated;
+    const m2Active = s.modules.module2.inverter.status === ComponentStatus.NORMAL && s.breakers[ParallelBreakerId.Q4_2] && !s.modules.module2.staticSwitch.isIsolated;
+    const m1OnBypass = s.modules.module1.staticSwitch.mode === 'BYPASS' && !s.modules.module1.staticSwitch.isIsolated;
+    const m2OnBypass = s.modules.module2.staticSwitch.mode === 'BYPASS' && !s.modules.module2.staticSwitch.isIsolated;
+
+    // Assume Load 1 is non-linear
+    const isLoadNonLinear = s.breakers[ParallelBreakerId.Load1];
+
+    // --- 2. MODULE 1 PROCESSING ---
     s.modules.module1 = processModule(
         s.modules.module1,
-        utilityInput,
+        s.voltages.utilityInput,
         {
             mainInput: s.breakers[ParallelBreakerId.Q1_1],
             bypassInput: s.breakers[ParallelBreakerId.Q2_1],
             batteryBreaker: s.breakers[ParallelBreakerId.QF1_1],
             output: s.breakers[ParallelBreakerId.Q4_1]
         },
+        m1Active ? (totalLoadAmps / (m1Active && m2Active ? 2 : 1)) : 0,
+        isLoadNonLinear,
         now,
         'NONE'
     );
 
-    // --- PROCESS MODULE 2 WITH REALISTIC PHYSICS ---
+    // --- 3. MODULE 2 PROCESSING ---
     s.modules.module2 = processModule(
         s.modules.module2,
-        utilityInput,
+        s.voltages.utilityInput,
         {
             mainInput: s.breakers[ParallelBreakerId.Q1_2],
             bypassInput: s.breakers[ParallelBreakerId.Q2_2],
             batteryBreaker: s.breakers[ParallelBreakerId.QF1_2],
             output: s.breakers[ParallelBreakerId.Q4_2]
         },
+        m2Active ? (totalLoadAmps / (m1Active && m2Active ? 2 : 1)) : 0,
+        isLoadNonLinear,
         now,
         'NONE'
     );
@@ -225,7 +340,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
             const loadBusEnergized = s.voltages.loadBus > 200;
 
             if (!inverterReady && bypassAvailable) {
-                // Only go to bypass if the SYSTEM is losing power. 
+                // Only go to bypass if the SYSTEM is losing power.
                 // If bus is energized (by parallel peer), stay in Inverter mode (Standby/Isolating)
                 if (!loadBusEnergized) {
                     module.staticSwitch.mode = 'BYPASS';
@@ -251,21 +366,6 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
     processStaticSwitch(s.modules.module1, bypass1Available);
     processStaticSwitch(s.modules.module2, bypass2Available);
 
-    // --- LOAD CALCULATION & SHARING ---
-    const load1kW = s.breakers[ParallelBreakerId.Load1] ? 60 : 0;
-    const load2kW = s.breakers[ParallelBreakerId.Load2] ? 40 : 0;
-    const totalLoadkW = load1kW + load2kW;
-
-    // Correct 3-phase current formula: I = P / (sqrt(3) * V * PF)
-    // 100kW / (1.732 * 415 * 0.9) ~= 155A
-    const loadAmps = (totalLoadkW * 1000) / (1.732 * 415 * 0.9);
-
-    // Determine active modules
-    const m1Active = s.modules.module1.inverter.status === ComponentStatus.NORMAL && s.breakers[ParallelBreakerId.Q4_1];
-    const m2Active = s.modules.module2.inverter.status === ComponentStatus.NORMAL && s.breakers[ParallelBreakerId.Q4_2];
-    const m1OnBypass = s.modules.module1.staticSwitch.mode === 'BYPASS';
-    const m2OnBypass = s.modules.module2.staticSwitch.mode === 'BYPASS';
-
     // Check maintenance bypass
     const m1Maintenance = s.breakers[ParallelBreakerId.Q3_1];
     const m2Maintenance = s.breakers[ParallelBreakerId.Q3_2];
@@ -289,7 +389,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
             s.voltages.loadBus = 415;
 
             // AUTOMATIC LOAD BALANCING WITH REDUNDANCY
-            const ampsPerModule = loadAmps / activeCount;
+            const ampsPerModule = totalLoadAmps / activeCount;
 
             // Module 1 Load Assignment with Efficiency Curve
             if (sources.includes('M1')) {
@@ -318,6 +418,8 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
                 s.modules.module1.inverter.loadPct = 0;
                 s.modules.module1.rectifier.loadPct = 5; // Idle charging
                 s.modules.module1.inverter.efficiency = 0;
+                // If isolated or inactive, ensure battery is not discharging
+                if (s.modules.module1.battery.current < 0) s.modules.module1.battery.current = 0;
             }
 
             // Module 2 Load Assignment with Efficiency Curve
@@ -346,6 +448,8 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
                 s.modules.module2.inverter.loadPct = 0;
                 s.modules.module2.rectifier.loadPct = 5;
                 s.modules.module2.inverter.efficiency = 0;
+                // If isolated or inactive, ensure battery is not discharging
+                if (s.modules.module2.battery.current < 0) s.modules.module2.battery.current = 0;
             }
         } else {
             // Check if Bypass can energize the bus
@@ -365,6 +469,27 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
                 s.modules.module2.inverter.loadPct = 0;
             }
         }
+    }
+
+    // Update System-Wide Parallel Metrics
+    const activeCount = (m1Active ? 1 : 0) + (m2Active ? 1 : 0);
+    if (activeCount > 0) {
+        s.kva = (m1Active ? (s.modules.module1.inverter.kva || 0) : 0) +
+                (m2Active ? (s.modules.module2.inverter.kva || 0) : 0);
+        s.pf = (m1Active ? (s.modules.module1.inverter.pf || 0) : 0) / activeCount +
+               (m2Active ? (s.modules.module2.inverter.pf || 0) : 0) / activeCount;
+        s.thd = (m1Active ? (s.modules.module1.inverter.thd || 0) : 0) / activeCount +
+                (m2Active ? (s.modules.module2.inverter.thd || 0) : 0) / activeCount;
+
+        // System Reactive Power (kVAr)
+        const totalKW = s.loadKW;
+        const totalKVA = s.kva;
+        s.currents.kvar = Math.sqrt(Math.max(0, Math.pow(totalKVA, 2) - Math.pow(totalKW, 2)));
+    } else {
+        s.kva = 0;
+        s.pf = 1.0;
+        s.thd = 0;
+        s.currents.kvar = 0;
     }
 
     // --- THERMAL MODELS ---

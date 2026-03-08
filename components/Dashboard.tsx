@@ -1,5 +1,16 @@
-
 import React from 'react';
+import { Activity, Zap, BarChart3, Shield } from 'lucide-react';
+
+const MetricCard = ({ label, value, icon, subValue, color = "text-cyan-400" }: any) => (
+    <div className="flex flex-col bg-slate-950/50 border border-slate-800 rounded px-3 py-1 min-w-[120px]">
+        <div className="flex items-center gap-2 mb-1">
+            <span className="text-slate-500">{icon}</span>
+            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{label}</span>
+        </div>
+        <div className={`text-sm font-mono font-black ${color}`}>{value}</div>
+        <div className="text-[9px] text-slate-600 font-medium">{subValue}</div>
+    </div>
+);
 
 const DigitalMeter = ({ label, value, unit, min, max, alertLow, alertHigh }: any) => {
     let statusColor = 'text-cyan-400';
@@ -88,6 +99,11 @@ export const Dashboard = ({ state }: { state: any }) => {
                 min={0} max={100}
                 alertLow={20} alertHigh={110}
             />
+
+            <div className="h-10 w-px bg-slate-700 mx-2"></div>
+
+            <MetricCard label="System THD" value={`${(state.components.inverter.thd || 0).toFixed(1)}%`} icon={<BarChart3 size={14} />} subValue={state.components.inverter.thd < 3 ? "Clean" : "Harmonics Detected"} color={state.components.inverter.thd < 5 ? "text-green-400" : "text-amber-400"} />
+            <MetricCard label="Apparent" value={`${(state.components.inverter.kva || 0).toFixed(1)} kVA`} icon={<Zap size={14} />} subValue={`PF: ${(state.components.inverter.pf || 0.90).toFixed(2)}`} />
 
             <div className="h-10 w-px bg-slate-700 mx-2"></div>
 

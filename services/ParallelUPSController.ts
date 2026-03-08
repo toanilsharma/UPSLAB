@@ -27,14 +27,16 @@ export class ParallelUPSController {
         // Module 1
         if (state.modules.module1.inverter.status === ComponentStatus.NORMAL &&
             state.breakers[ParallelBreakerId.Q4_1] &&
-            state.modules.module1.staticSwitch.mode === 'INVERTER') {
+            state.modules.module1.staticSwitch.mode === 'INVERTER' &&
+            !state.modules.module1.staticSwitch.isIsolated) {
             count++;
         }
 
         // Module 2
         if (state.modules.module2.inverter.status === ComponentStatus.NORMAL &&
             state.breakers[ParallelBreakerId.Q4_2] &&
-            state.modules.module2.staticSwitch.mode === 'INVERTER') {
+            state.modules.module2.staticSwitch.mode === 'INVERTER' &&
+            !state.modules.module2.staticSwitch.isIsolated) {
             count++;
         }
 
@@ -50,15 +52,12 @@ export class ParallelUPSController {
         state: ParallelSimulationState
     ): { allowed: boolean; reason?: string } {
 
-        // INTERLOCK 1: Block Q3_x closing unless STSx = BYPASS
-        if (isClosing && breakerId === ParallelBreakerId.Q3_1) {
-            if (state.modules.module1.staticSwitch.mode !== 'BYPASS') {
-                return { allowed: false, reason: 'INTERLOCK: STS1 must be in BYPASS before closing Q3-1' };
-            }
-        }
-        if (isClosing && breakerId === ParallelBreakerId.Q3_2) {
-            if (state.modules.module2.staticSwitch.mode !== 'BYPASS') {
-                return { allowed: false, reason: 'INTERLOCK: STS2 must be in BYPASS before closing Q3-2' };
+        // INTERLOCK 1: Stricter Mechanical Interlock (Phase 2)
+        // Block Q3_x closing unless STSx is PHYSICALLY in BYPASS position
+        if (isClosing && (breakerId === ParallelBreakerId.Q3_1 || breakerId === ParallelBreakerId.Q3_2)) {
+            const module = breakerId === ParallelBreakerId.Q3_1 ? state.modules.module1 : state.modules.module2;
+            if (module.staticSwitch.mode !== 'BYPASS') {
+                return { allowed: false, reason: `MECHANICAL INTERLOCK: STS-${breakerId === ParallelBreakerId.Q3_1 ? '1' : '2'} must be in BYPASS position before operating Maintenance Bypass.` };
             }
         }
 
@@ -149,6 +148,46 @@ export class ParallelUPSController {
         const m2OnBypass = state.modules.module2.staticSwitch.mode === 'BYPASS';
         const m1MaintBypass = state.breakers[ParallelBreakerId.Q3_1];
         const m2MaintBypass = state.breakers[ParallelBreakerId.Q3_2];
+
+        // --- STS AUTO-ISOLATION (PRIORITY LOAD SHARING) LOGIC ---
+        // If a module is healthy on Mains, the peer should "isolate" (block STS)
+        // if the peer is on Battery or Faulty. 
+        // This ensures the Mains-powered module takes 100% load.
+
+        const m1HealthyOnMains = m1InvON && m1RectON && !m1MaintBypass;
+        const m2HealthyOnMains = m2InvON && m2RectON && !m2MaintBypass;
+        const m1OnBattOrFault = m1OnBattery || state.modules.module1.inverter.status === ComponentStatus.FAULT;
+        const m2OnBattOrFault = m2OnBattery || state.modules.module2.inverter.status === ComponentStatus.FAULT;
+
+        // Auto-Isolate M1 if M2 is healthy on mains and M1 is not
+        if (m2HealthyOnMains && m1OnBattOrFault) {
+            state.modules.module1.staticSwitch.isIsolated = true;
+        } else if (m1HealthyOnMains && m1InvON) {
+            // M1 is healthy, keep it active (unless M2 is also healthy, see below)
+            state.modules.module1.staticSwitch.isIsolated = false;
+        }
+
+        // Auto-Isolate M2 if M1 is healthy on mains and M2 is not
+        if (m1HealthyOnMains && m2OnBattOrFault) {
+            state.modules.module2.staticSwitch.isIsolated = true;
+        } else if (m2HealthyOnMains && m2InvON) {
+            // M2 is healthy, keep it active
+            state.modules.module2.staticSwitch.isIsolated = false;
+        }
+
+        // If both are on battery or both on mains, disable isolation for sharing
+        if ((m1OnBattery && m2OnBattery) || (m1HealthyOnMains && m2HealthyOnMains)) {
+            state.modules.module1.staticSwitch.isIsolated = false;
+            state.modules.module2.staticSwitch.isIsolated = false;
+        }
+
+        // Emergency override: If only one module is available at all, it MUST not be isolated
+        if (m1OnBattOrFault && !m2InvON) {
+            state.modules.module1.staticSwitch.isIsolated = false;
+        }
+        if (m2OnBattOrFault && !m1InvON) {
+            state.modules.module2.staticSwitch.isIsolated = false;
+        }
 
         // --- EPO CHECK (Section 15) ---
         if (state.faults.epo) {

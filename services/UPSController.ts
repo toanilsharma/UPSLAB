@@ -106,7 +106,11 @@ export class UPSController {
         switch (nextState.upsMode) {
             case UPSMode.OFF:
                 if (INV_ON && STS_INV && b.Q4) nextState.upsMode = UPSMode.ONLINE;
-                if (INV_ON && b.QF1 && !b.Q1 && !MAINS_OK) nextState.upsMode = UPSMode.BLACK_START;
+                // PHASE 2: BLACK START (Battery Cold Start)
+                // If Battery is available (QF1 closed) and Utility is dead, allow transition to BLACK_START
+                if (!MAINS_OK && b.QF1 && BATTERY_SOC > 20 && b.Q4) {
+                    nextState.upsMode = UPSMode.BLACK_START;
+                }
                 break;
 
             case UPSMode.BLACK_START:
@@ -242,14 +246,19 @@ export class UPSController {
         const s = state.components;
 
         // =====================================================================
-        // ROW 8: Close Q3 wrong time
-        // Precondition: STS ≠ BYPASS
-        // Reaction: Action blocked by logic
-        // Alarms: ILLEGAL OPERATION
+        // PHASE 2 & ROW 8: Stricter Interlock (Mechanical vs Logic)
+        // Q3 (Maint Bypass) cannot be closed unless STS is PHYSICALLY in Bypass
         // =====================================================================
         if (breaker === BreakerId.Q3 && !isOpenOperation) {
+            // Check if STS is in BYPASS mode. 
+            // In a real UPS, this is often a solenoid key or a physical position.
             if (s.staticSwitch.mode !== 'BYPASS') {
-                return { allowed: false, reason: 'ILLEGAL OPERATION: STS must be in BYPASS before closing Q3.' };
+                return { allowed: false, reason: 'MECHANICAL INTERLOCK: STS must be in BYPASS position before Q3 can be operated.' };
+            }
+            // Warning: Paralleling sources (Make-before-break)
+            if (s.inverter.status === ComponentStatus.NORMAL) {
+                // This is allowed for professional operators, but usually triggers an alarm
+                // state.alarms.push('MAINTENANCE BYPASS PARALLEL OPERATION');
             }
         }
 

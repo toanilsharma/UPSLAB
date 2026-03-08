@@ -2,6 +2,19 @@
 import React from 'react';
 import { ParallelSimulationState } from '../parallel_types';
 import { motion } from 'framer-motion';
+import { Activity, Zap, BarChart3, Shield, Thermometer } from 'lucide-react';
+
+// Enhanced Metric Card for Phase 1
+const MetricCard = ({ label, value, icon, subValue, color = "text-cyan-400" }: any) => (
+    <div className="flex flex-col bg-slate-950/50 border border-slate-800 rounded px-3 py-1 min-w-[120px]">
+        <div className="flex items-center gap-2 mb-1">
+            <span className="text-slate-500">{icon}</span>
+            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{label}</span>
+        </div>
+        <div className={`text-sm font-mono font-black ${color}`}>{value}</div>
+        <div className="text-[9px] text-slate-600 font-medium">{subValue}</div>
+    </div>
+);
 
 // Digital Gauge Component (Unified Style)
 const DigitalMeter = ({ label, value, unit, min, max, alertLow, alertHigh, small = false }: any) => {
@@ -63,10 +76,10 @@ export const ParallelDashboard = ({ state }: { state: ParallelSimulationState })
     const loadPct = (state.currents.totalOutput / 400) * 100; 
 
     // Calculate Load Share Imbalance
-    const i1 = state.modules.module1.inverter.currentOutput;
-    const i2 = state.modules.module2.inverter.currentOutput;
-    const totalI = i1 + i2 || 1;
-    const share1 = (i1 / totalI) * 100;
+    const i1 = state.modules.module1.inverter.loadPct;
+    const i2 = state.modules.module2.inverter.loadPct;
+    const totalLoadPct = i1 + i2 || 1;
+    const share1 = (i1 / totalLoadPct) * 100;
     
     // Determine System Status Text
     let sysStatus = "SYSTEM NORMAL";
@@ -129,6 +142,12 @@ export const ParallelDashboard = ({ state }: { state: ParallelSimulationState })
 
                 <ModuleStatus id="MOD 2" rectifier={state.modules.module2.rectifier.status} inverter={state.modules.module2.inverter.status} />
              </div>
+
+             {/* System Primary Metrics */}
+            <MetricCard label="System Load" value={`${state.loadKW.toFixed(1)} kW`} icon={<Activity size={16} />} subValue={`${((state.loadKW / state.totalCapacityKW) * 100).toFixed(1)}% Capacity`} />
+            <MetricCard label="Apparent Power" value={`${(state.kva || 0).toFixed(1)} kVA`} icon={<Zap size={16} />} subValue={`PF: ${(state.pf || 0.95).toFixed(2)}`} color="text-cyan-400" />
+            <MetricCard label="System THD" value={`${(state.thd || 0).toFixed(1)}%`} icon={<BarChart3 size={16} />} subValue={state.thd < 3 ? "Excellent Quality" : "Heavy Harmonics"} color={state.thd < 5 ? "text-green-400" : "text-orange-400"} />
+            <MetricCard label="Reactive Power" value={`${(state.currents.kvar || 0).toFixed(1)} kVAr`} icon={<Activity size={16} />} subValue="Phase Displaced" color="text-purple-400" />
 
              <div className="h-10 w-px bg-slate-700 mx-1"></div>
 

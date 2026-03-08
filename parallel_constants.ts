@@ -5,8 +5,13 @@ const COMPONENT_DEFAULTS = {
     status: ComponentStatus.NORMAL,
     temperature: 35,
     loadPct: 45, // approx 90% total load shared
-    efficiency: 0.95,
-    voltageOut: 220
+    efficiency: 0,
+    voltageOut: 0,
+    kva: 0,
+    pf: 0,
+    thd: 0,
+    prechargePct: 0,
+    walkInPct: 0
 };
 
 const BATTERY_DEFAULTS = {
@@ -14,14 +19,24 @@ const BATTERY_DEFAULTS = {
     temp: 25,
     health: 100,
     voltage: 220,
+    ri: 0.015,
+    soh: 100
 };
 
 const MODULE_DEFAULTS = {
     rectifier: { ...COMPONENT_DEFAULTS, voltageOut: 220 },
     inverter: { ...COMPONENT_DEFAULTS, voltageOut: 415, temperature: 45 },
-    staticSwitch: { mode: 'INVERTER' as const, status: 'OK' as const, syncError: 0, forceBypass: false },
+    staticSwitch: { 
+        mode: 'INVERTER' as const, 
+        status: 'OK' as const, 
+        syncError: 0, 
+        syncStatus: 'SYNCED' as const,
+        forceBypass: false, 
+        isIsolated: false 
+    },
     battery: { ...BATTERY_DEFAULTS },
-    dcBusVoltage: 220
+    dcBusVoltage: 220,
+    effectiveCapacityAh: 100
 };
 
 export const INITIAL_PARALLEL_STATE: ParallelSimulationState = {
@@ -46,6 +61,8 @@ export const INITIAL_PARALLEL_STATE: ParallelSimulationState = {
         utilityInput: 415,
         loadBus: 415,
         bypassInput: 415,
+        loadPhase: 0,
+        bypassPhase: 0,
     },
     frequencies: {
         utility: 50.0,
@@ -55,6 +72,7 @@ export const INITIAL_PARALLEL_STATE: ParallelSimulationState = {
         totalOutput: 190,
         load1: 110,
         load2: 80,
+        kvar: 45
     },
     modules: {
         module1: JSON.parse(JSON.stringify(MODULE_DEFAULTS)),
@@ -62,8 +80,12 @@ export const INITIAL_PARALLEL_STATE: ParallelSimulationState = {
     },
     // Parallel-specific fields
     availableModules: 2,
+    effectiveCapacityAh: 100,
     totalCapacityKW: 200, // 2 x 100kVA modules
     loadKW: 100,
+    kva: 110,
+    pf: 0.91,
+    thd: 1.5,
     redundancyOK: true, // N+1 OK
     // Fault injection
     faults: {
@@ -269,9 +291,9 @@ export const PROC_MODULE_1_RESTORE: ParallelProcedure = {
             ...INITIAL_PARALLEL_STATE.modules,
             module1: {
                 ...INITIAL_PARALLEL_STATE.modules.module1,
-                rectifier: { ...INITIAL_PARALLEL_STATE.modules.module1.rectifier, status: ComponentStatus.OFF, voltageOut: 0 },
-                inverter: { ...INITIAL_PARALLEL_STATE.modules.module1.inverter, status: ComponentStatus.OFF, voltageOut: 0 },
-                staticSwitch: { mode: 'BYPASS' as const, status: 'OK' as const, syncError: 0, forceBypass: false },
+                rectifier: { ...COMPONENT_DEFAULTS, status: ComponentStatus.NORMAL, temperature: 45, voltageOut: 220, efficiency: 0.94, pf: 0.98, thd: 3.1, prechargePct: 100, walkInPct: 100 },
+                inverter: { ...COMPONENT_DEFAULTS, status: ComponentStatus.NORMAL, temperature: 52, voltageOut: 415, efficiency: 0.96, pf: 0.9, thd: 1.2, prechargePct: 100, walkInPct: 100 },
+                staticSwitch: { mode: 'INVERTER' as const, status: 'OK' as const, syncError: 0, syncStatus: 'SYNCED' as const, forceBypass: false },
             }
         }
     },

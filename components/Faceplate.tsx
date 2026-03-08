@@ -34,10 +34,16 @@ export const Faceplate: React.FC<FaceplateProps> = ({ type, data, onClose, onAct
                 {/* Status Indicator */}
                 <div className="flex items-center gap-4 mb-6 bg-slate-900/50 p-3 rounded border border-slate-700">
                     <div className={`w-3 h-3 rounded-full ${status === 'NORMAL' || status === 'INVERTER' ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : status === 'STARTING' ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`}></div>
-                    <div>
+                    <div className="flex-1">
                         <div className="text-[10px] text-slate-500 uppercase">Current Status</div>
                         <div className="text-lg font-mono font-bold text-white">{status}</div>
                     </div>
+                    {status === 'STARTING' && data.startTimer !== undefined && (
+                        <div className="text-right">
+                            <div className="text-[10px] text-blue-400 uppercase font-bold">Time to Ready</div>
+                            <div className="text-xl font-mono font-black text-blue-400">{data.startTimer.toFixed(1)}s</div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Telemetry Grid */}
