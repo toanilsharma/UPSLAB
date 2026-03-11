@@ -372,9 +372,10 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
                 {/* Top Bar: Header & Gauges - HIDDEN ON MOBILE (Replaced by HUD) */}
                 {!isMobile && (
                     <div className="flex-none flex justify-between items-center bg-slate-900 border-b border-cyan-500/20 shadow-lg z-10 px-4 py-2 h-20">
-                        <div className="flex flex-col justify-center cursor-pointer group" onClick={onReturnToMenu}>
-                            <h1 className="text-xl font-black italic text-slate-100 tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-500">UPS</span> <span className="text-sm font-normal text-slate-400">SINGLE</span></h1>
-                            <div className="text-[10px] text-slate-400 font-mono tracking-widest mt-1 group-hover:text-cyan-500 transition-colors">
+                        <div className="flex flex-col justify-center cursor-pointer group mt-2" onClick={onReturnToMenu}>
+                            <h1 className="text-xl font-black italic pl-4 pr-1 text-slate-100 tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-500">UPS</span> <span className="text-sm font-normal text-slate-400">SINGLE</span></h1>
+                            <div className="text-[9px] text-cyan-400/80 font-mono tracking-wider mt-1 pl-4 uppercase">IEC 62040-3 VFI-SS-111 & IEEE 3006.7 Compliant Scheme</div>
+                            <div className="text-[10px] text-slate-400 font-mono tracking-widest mt-1 pl-4 group-hover:text-cyan-500 transition-colors">
                                 {state.upsMode} {/* Display Mode Here */}
                                 {onReturnToMenu && ' · CLICK TO EXIT'}
                             </div>
@@ -517,7 +518,7 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
                         </div>
 
                         {/* BOTTOM PANEL: METRICS & WAVES */}
-                        <div className="flex-none h-64 flex gap-0 border-t border-slate-800">
+                        <div className="flex-none h-36 flex gap-0 border-t border-slate-800">
                             <div className="w-1/2 h-full border-r border-slate-800">
                                 <Waveforms state={state} />
                             </div>
@@ -576,7 +577,7 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
 
             {/* RIGHT COLUMN: PROCEDURES - HIDDEN ON MOBILE (Replaced by Tab) */}
             {!isMobile && (
-                <div className="w-80 flex-none bg-slate-900 border-l border-slate-800 shadow-xl z-20">
+                <div className="w-80 flex-none bg-slate-900 border-l border-slate-800 shadow-xl z-20 overflow-hidden">
                     <ProcedurePanel
                         procedure={activeProcedure}
                         currentStepIndex={stepIndex}

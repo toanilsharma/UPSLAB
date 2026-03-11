@@ -38,7 +38,7 @@ const PowerLine = ({ d, energized, warning = false, thick = false, currentFlow =
         : '#ffffff';  // White when de-energized
         
     const baseOpacity = energized ? 1 : 0.15; // Dim white
-    const strokeWidth = thick ? 4 : 3;
+    const strokeWidth = thick ? 6 : 4;
 
     const isFlowing = energized;
     const flowColor = '#ffffff';
@@ -113,7 +113,7 @@ const FlowIndicator = ({ d, energized, reverse = false }: { d: string, energized
             d={d}
             fill="none"
             stroke="#ffffff" // Bright white for max contrast against dark bg
-            strokeWidth={3}
+            strokeWidth={4}
             strokeDasharray="10, 10"
             strokeLinecap="round"
             initial={{ strokeDashoffset: 0 }}
@@ -139,6 +139,12 @@ const Breaker = ({ id, x, y, isOpen, onClick, label, vertical = false, isEnergiz
 
     return (
         <g transform={`translate(${x}, ${y})`} className="cursor-pointer group" onClick={onClick}>
+            {/* Custom Instant Tooltip */}
+            <g className="opacity-0 group-hover:opacity-100 transition-opacity duration-75 pointer-events-none drop-shadow-lg" style={{ zIndex: 50 }}>
+                <rect x={-65} y={-55} width={130} height={20} rx="4" fill="#1e293b" stroke="#e2e8f0" strokeWidth="1" />
+                <text x={0} y={-41} textAnchor="middle" className="fill-white text-[11px] font-bold tracking-wider">CLICK TO OPERATE</text>
+            </g>
+
             {/* Hitbox */}
             <rect x="-30" y="-30" width={60} height={60} fill="transparent" />
 
@@ -216,7 +222,7 @@ const ComponentBox = ({ x, y, w, h, label, status, onClick, children, type, time
             </text>
 
             {status === ComponentStatus.STARTING && timer !== undefined && (
-                <text x={w / 2} y={h / 2 + 20} textAnchor="middle" className="fill-blue-400 text-[13px] font-mono font-bold animate-pulse">{timer.toFixed(1)}s</text>
+                <text x={w / 2} y={h / 2 + 20} textAnchor="middle" className="fill-white text-[16px] font-mono font-black drop-shadow-lg animate-pulse">{timer.toFixed(1)}s {type.includes('rect') ? 'DC BLD' : 'AC BLD'}</text>
             )}
 
             {/* Status LED */}
@@ -258,18 +264,22 @@ const StaticSwitchInternal = ({ mode, inFlowing, byFlowing, isIsolated }: { mode
 
     return (
         <g>
-            <text x="-8" y="-40" className="fill-slate-400 text-[10px] font-bold" textAnchor="end">BYP</text>
-            <text x="-8" y="8" className="fill-slate-400 text-[10px] font-bold" textAnchor="end">INV</text>
+            {/* BYPASS NODE */}
+            <circle cx="-8" cy="-28" r="4" fill={isBypass ? '#f59e0b' : '#334155'} />
+            <text x="-8" y="-40" className="fill-slate-300 text-[12px] font-bold" textAnchor="end">BYP</text>
+            {/* INVERTER NODE */}
+            <circle cx="-8" cy="12" r="4" fill={!isBypass ? '#f59e0b' : '#334155'} />
+            <text x="-8" y="8" className="fill-slate-300 text-[12px] font-bold" textAnchor="end">INV</text>
             {isIsolated && <text x="0" y="32" className="fill-red-500 text-[9px] font-black" textAnchor="middle">BLOCKED</text>}
 
             {/* Bypass path: M-25,-48 L0,12 */}
-            <path d="M-25,-48 L12,12" stroke={isBypass ? activeColor : inactiveColor} strokeWidth={isBypass ? 3 : 2} />
+            <path d="M-25,-48 L12,12" stroke={isBypass ? activeColor : inactiveColor} strokeWidth={isBypass ? 4 : 3} />
             {byFlowing && (
                 <motion.path
                     d="M-25,-48 L12,12"
                     fill="none"
                     stroke="#ffffff"
-                    strokeWidth={3}
+                    strokeWidth={4}
                     strokeDasharray="6, 6"
                     initial={{ strokeDashoffset: 0 }}
                     animate={{ strokeDashoffset: -12 }}
@@ -279,13 +289,13 @@ const StaticSwitchInternal = ({ mode, inFlowing, byFlowing, isIsolated }: { mode
             )}
 
             {/* Inverter path: M-25,12 L12,12 */}
-            <path d="M-25,12 L12,12" stroke={!isBypass ? activeColor : inactiveColor} strokeWidth={!isBypass ? 3 : 2} />
+            <path d="M-25,12 L12,12" stroke={!isBypass ? activeColor : inactiveColor} strokeWidth={!isBypass ? 4 : 3} />
             {inFlowing && (
                 <motion.path
                     d="M-25,12 L12,12"
                     fill="none"
                     stroke="#ffffff"
-                    strokeWidth={3}
+                    strokeWidth={4}
                     strokeDasharray="6, 6"
                     initial={{ strokeDashoffset: 0 }}
                     animate={{ strokeDashoffset: -12 }}
@@ -307,13 +317,13 @@ const StaticSwitchInternal = ({ mode, inFlowing, byFlowing, isIsolated }: { mode
 
             {/* Output node and line */}
             <circle cx="12" cy="12" r="3" fill="#e2e8f0" />
-            <line x1="12" y1="12" x2="25" y2="12" stroke={activeColor} strokeWidth="3" />
+            <line x1="12" y1="12" x2="25" y2="12" stroke={activeColor} strokeWidth="4" />
             {(inFlowing || byFlowing) && (
                  <motion.path
                     d="M12,12 L25,12"
                     fill="none"
                     stroke="#ffffff"
-                    strokeWidth={3}
+                    strokeWidth={4}
                     strokeDasharray="6, 6"
                     initial={{ strokeDashoffset: 0 }}
                     animate={{ strokeDashoffset: -12 }}
@@ -503,11 +513,11 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     <GroundSymbol x={660} y={118} />
 
                     {/* MAINTENANCE BYPASS - Separate path from UTILITY-B */}
-                    {/* Fixed 'MAINT BYPASS' text overlap by moving to center of line segment (203) */}
+                    {/* MAINTENANCE BYPASS - Fixed Text Overlap */}
                     <text x="203" y="30" textAnchor="middle" className="fill-orange-400 text-[11px] font-bold">MAINT BYPASS</text>
-                    <PowerLine d="M100,52 L100,35 L306,35" energized={breakers[ParallelBreakerId.Q3_1] && voltages.utilityInput > 50} warning />
+                    <PowerLine d="M100,52 L100,35 L306,35" energized={voltages.utilityInput > 50} warning />
                     <PowerLine d="M354,35 L660,35 L660,112" energized={breakers[ParallelBreakerId.Q3_1] && voltages.utilityInput > 50} warning />
-                    <FlowIndicator d="M100,52 L100,35 L306,35" energized={breakers[ParallelBreakerId.Q3_1] && voltages.utilityInput > 50} />
+                    <FlowIndicator d="M100,52 L100,35 L306,35" energized={voltages.utilityInput > 50} />
                     <FlowIndicator d="M354,35 L660,35 L660,112" energized={breakers[ParallelBreakerId.Q3_1] && voltages.utilityInput > 50} />
                     
                     <Node x={100} y={52} />
@@ -637,9 +647,9 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
 
                     {/* MAINTENANCE BYPASS - Fixed Text Overlap */}
                     <text x="203" y="30" textAnchor="middle" className="fill-orange-400 text-[11px] font-bold">MAINT BYPASS</text>
-                    <PowerLine d="M100,52 L100,35 L306,35" energized={breakers[ParallelBreakerId.Q3_2] && voltages.utilityInput > 50} warning />
+                    <PowerLine d="M100,52 L100,35 L306,35" energized={voltages.utilityInput > 50} warning />
                     <PowerLine d="M354,35 L660,35 L660,112" energized={breakers[ParallelBreakerId.Q3_2] && voltages.utilityInput > 50} warning />
-                    <FlowIndicator d="M100,52 L100,35 L306,35" energized={breakers[ParallelBreakerId.Q3_2] && voltages.utilityInput > 50} />
+                    <FlowIndicator d="M100,52 L100,35 L306,35" energized={voltages.utilityInput > 50} />
                     <FlowIndicator d="M354,35 L660,35 L660,112" energized={breakers[ParallelBreakerId.Q3_2] && voltages.utilityInput > 50} />
                     
                     <Node x={100} y={52} />

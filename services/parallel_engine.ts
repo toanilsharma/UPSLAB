@@ -45,23 +45,20 @@ function processModule(
         module.rectifier.startTimer = undefined;
     } else if (breakers.mainInput && utilityInput > 400) {
         if (module.rectifier.status === ComponentStatus.STARTING) {
-            // PHASE 2: DC PRE-CHARGE & WALK-IN
-            if ((module.rectifier.prechargePct || 0) < 100) {
-                module.rectifier.prechargePct = Math.min(100, (module.rectifier.prechargePct || 0) + 20);
-                module.rectifier.voltageOut = 150 * ((module.rectifier.prechargePct || 0) / 100);
-                module.rectifier.startTimer = 5;
-            } else {
-                module.rectifier.walkInPct = Math.min(100, (module.rectifier.walkInPct || 0) + 5);
-                const targetV = 220;
-                const startV = 150;
-                module.rectifier.voltageOut = startV + (targetV - startV) * ((module.rectifier.walkInPct || 0) / 100);
-                module.rectifier.startTimer = Math.ceil((100 - (module.rectifier.walkInPct || 0)) / 5) * 0.2;
+            // Strict 10-second reverse timer
+            if (module.rectifier.startTimer === undefined || module.rectifier.startTimer === 0) {
+                module.rectifier.startTimer = 10.0;
+                module.rectifier.voltageOut = 0;
+            }
+            module.rectifier.startTimer = Math.max(0, module.rectifier.startTimer - 0.2);
+            
+            const progress = (10.0 - module.rectifier.startTimer) / 10.0;
+            module.rectifier.voltageOut = 220 * progress;
 
-                if (module.rectifier.walkInPct === 100) {
-                    module.rectifier.status = ComponentStatus.NORMAL;
-                    module.rectifier.voltageOut = 220;
-                    module.rectifier.startTimer = 0;
-                }
+            if (module.rectifier.startTimer <= 0) {
+                module.rectifier.status = ComponentStatus.NORMAL;
+                module.rectifier.voltageOut = 220;
+                module.rectifier.startTimer = 0;
             }
         } else if (module.rectifier.status === ComponentStatus.NORMAL) {
             module.rectifier.voltageOut = 220 + (Math.sin(now / 2000) * 0.2);
@@ -152,14 +149,17 @@ function processModule(
     } else if (module.dcBusVoltage > 155 && module.inverter.status !== ComponentStatus.OFF) {
         // Inverter needs >155V DC to modulate AC (220V system)
         if (module.inverter.status === ComponentStatus.STARTING) {
-            // Increased speed for < 8s startup
-            module.inverter.voltageOut += 12;
+            // Strict 10-second reverse timer
+            if (module.inverter.startTimer === undefined || module.inverter.startTimer === 0) {
+                module.inverter.startTimer = 10.0;
+                module.inverter.voltageOut = 0;
+            }
+            module.inverter.startTimer = Math.max(0, module.inverter.startTimer - 0.2);
+            
+            const progress = (10.0 - module.inverter.startTimer) / 10.0;
+            module.inverter.voltageOut = 415 * progress;
 
-            // Calculate remaining time: 12V per 200ms tick. Target 415V.
-            const remainingVolts = Math.max(0, 415 - module.inverter.voltageOut);
-            module.inverter.startTimer = Math.ceil(remainingVolts / 12) * 0.2;
-
-            if (module.inverter.voltageOut >= 415) {
+            if (module.inverter.startTimer <= 0) {
                 module.inverter.status = ComponentStatus.NORMAL;
                 module.inverter.voltageOut = 415;
                 module.inverter.startTimer = 0;

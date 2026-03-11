@@ -112,27 +112,22 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     } else if (b[BreakerId.Q1] && utilityLive) {
         if (s.components.rectifier.status === ComponentStatus.STARTING) {
             // PHASE 2: DC PRE-CHARGE & WALK-IN
-            // 1. DC Pre-charge (0-100%)
-            if ((s.components.rectifier.prechargePct || 0) < 100) {
-                s.components.rectifier.prechargePct = Math.min(100, (s.components.rectifier.prechargePct || 0) + 20); // 1 second total
-                s.components.rectifier.voltageOut = 150 * ((s.components.rectifier.prechargePct || 0) / 100);
-                s.components.rectifier.startTimer = 5; // Placeholder for pre-charge phase
-            } 
-            // 2. Rectifier Walk-in (100V -> 220V with Power Limit)
-            else {
-                s.components.rectifier.walkInPct = Math.min(100, (s.components.rectifier.walkInPct || 0) + 5); // ~4 seconds total
-                const targetV = 220;
-                const startV = 150;
-                s.components.rectifier.voltageOut = startV + (targetV - startV) * ((s.components.rectifier.walkInPct || 0) / 100);
-                
-                // Calculate remaining time
-                s.components.rectifier.startTimer = Math.ceil((100 - (s.components.rectifier.walkInPct || 0)) / 5) * 0.2;
+            // Strict 10-second reverse timer initialization
+            if (s.components.rectifier.startTimer === undefined || s.components.rectifier.startTimer === 0) {
+                s.components.rectifier.startTimer = 10.0;
+                s.components.rectifier.voltageOut = 0;
+            }
 
-                if (s.components.rectifier.walkInPct === 100) {
-                    s.components.rectifier.status = ComponentStatus.NORMAL;
-                    s.components.rectifier.voltageOut = 220;
-                    s.components.rectifier.startTimer = 0;
-                }
+            s.components.rectifier.startTimer = Math.max(0, s.components.rectifier.startTimer - 0.2);
+
+            // Voltage builds linearly from 0 to 220 over the 10 seconds
+            const progress = (10.0 - s.components.rectifier.startTimer) / 10.0;
+            s.components.rectifier.voltageOut = 220 * progress;
+
+            if (s.components.rectifier.startTimer <= 0) {
+                s.components.rectifier.status = ComponentStatus.NORMAL;
+                s.components.rectifier.voltageOut = 220;
+                s.components.rectifier.startTimer = 0;
             }
         } else if (s.components.rectifier.status === ComponentStatus.NORMAL) {
             // PID Simulation: Slight fluctuation around setpoint
@@ -242,18 +237,24 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     } else if (s.voltages.dcBus > 155) {
         // Inverter needs >155V DC to modulate AC (220V system)
         if (s.components.inverter.status === ComponentStatus.STARTING) {
-            // Increased speed for < 8s startup
-            s.components.inverter.voltageOut += 12;
-            s.frequencies.inverter = 45 + (Math.random() * 2);
+            // Strict 10-second reverse timer initialization
+            if (s.components.inverter.startTimer === undefined || s.components.inverter.startTimer === 0) {
+                s.components.inverter.startTimer = 10.0;
+                s.components.inverter.voltageOut = 0;
+            }
 
-            // Calculate remaining time: 12V per 200ms tick. Target 415V.
-            const remainingVolts = Math.max(0, 415 - s.components.inverter.voltageOut);
-            s.components.inverter.startTimer = Math.ceil(remainingVolts / 12) * 0.2;
+            s.components.inverter.startTimer = Math.max(0, s.components.inverter.startTimer - 0.2);
 
-            if (s.components.inverter.voltageOut >= 415) {
+            // Voltage builds linearly from 0 to 415 over the 10 seconds
+            const progress = (10.0 - s.components.inverter.startTimer) / 10.0;
+            s.components.inverter.voltageOut = 415 * progress;
+            s.frequencies.inverter = 45 + (5 * progress); // Freq climbs to 50
+
+            if (s.components.inverter.startTimer <= 0) {
                 s.components.inverter.status = ComponentStatus.NORMAL;
                 s.components.inverter.voltageOut = 415;
                 s.components.inverter.startTimer = 0;
+                s.frequencies.inverter = 50.0;
             }
         } else {
             s.components.inverter.voltageOut = 415 + (Math.sin(now / 1000) * 0.2);

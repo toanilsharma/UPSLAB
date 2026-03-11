@@ -25,7 +25,7 @@ export const ProcedurePanel: React.FC<ProcedurePanelProps> = ({
 
   if (!procedure) {
     return (
-      <div className="procedure-panel h-full p-4 flex flex-col gap-4">
+      <div className="procedure-panel h-full p-4 pl-6 flex flex-col gap-4 overflow-y-auto">
         <h2 className="text-xl font-bold text-slate-200">Standard Operating Procedures</h2>
         <button onClick={() => onSelectProcedure('maint_bypass')} className="bg-slate-700 hover:bg-blue-600 p-3 rounded text-left border border-slate-600">
           <div className="font-bold">SOP-01: Maint. Bypass Transfer</div>

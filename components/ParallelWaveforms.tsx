@@ -98,17 +98,22 @@ export const ParallelWaveforms: React.FC<WaveformsProps> = ({ state }) => {
              
              // Top Right: Label
              ctx.fillStyle = color;
-             ctx.font = 'bold 12px monospace';
+             ctx.font = 'bold 16px monospace';
              ctx.textAlign = 'right';
-             ctx.fillText(label, w - 8, 14);
+             ctx.fillText(label, w - 8, 20);
 
+             // Bottom Right: Live Values
              ctx.textAlign = 'right';
-             ctx.fillStyle = '#94a3b8';
-             ctx.font = '12px monospace';
+             ctx.fillStyle = '#cbd5e1'; // Slate-300
+             ctx.font = 'bold 14px monospace';
              
-             ctx.fillText(`${voltage.toFixed(0)}V`, w - 8, h - 34);
-             ctx.fillText(`${freq.toFixed(1)}Hz`, w - 8, h - 22);
-             ctx.fillText(`THD ${thd.toFixed(1)}%`, w - 8, h - 10);
+             const vText = `${voltage.toFixed(0)}V`;
+             const fText = `${freq.toFixed(1)}Hz`;
+             const thdText = `THD ${thd.toFixed(1)}%`;
+             
+             ctx.fillText(vText, w - 8, h - 44);
+             ctx.fillText(fText, w - 8, h - 26);
+             ctx.fillText(thdText, w - 8, h - 8);
         };
 
         const draw = () => {
@@ -159,15 +164,20 @@ export const ParallelWaveforms: React.FC<WaveformsProps> = ({ state }) => {
 
    return (
         <div className="bg-slate-900 border border-slate-700/50 rounded-md p-1.5 h-32 flex flex-col shadow-lg"> {/* Compact Height: h-32 (128px) */}
-            <div className="flex items-center justify-between px-1 mb-1 flex-none">
-                <div className="flex items-center gap-2">
-                     <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse shadow-[0_0_8px_cyan]"></div>
-                     <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Dual-Channel Analyzer</span>
+            <div className="flex flex-col px-2 mb-1 flex-none space-y-1 mt-1">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                         <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_lime]"></div>
+                         <span className="text-[13px] text-slate-300 font-bold tracking-widest uppercase">System Power Analyzer</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-mono">500ms/div</div>
                 </div>
-                <div className="text-[9px] text-slate-600 font-mono">Synced</div>
+                <div className="text-[10px] text-slate-300 font-mono leading-tight uppercase hidden md:block">
+                    * NOTE: Input grid supply may contain harmonics, ripples, and impurities &gt;5% THDi (Ref: IEEE 519 / IEC 61000-2-4). Topologically isolated to provide clean Class 1 VFI power to critical load.
+                </div>
             </div>
 
-            <div className="flex-1 grid grid-cols-2 gap-2 h-full min-h-0">
+            <div className="flex-1 grid grid-cols-2 gap-2 h-full min-h-0 px-1 pb-1">
                 {/* Channel 1: Input */}
                 <div className="relative rounded overflow-hidden border border-slate-700/50 bg-black shadow-inner group">
                     <canvas ref={inputCanvasRef} className="w-full h-full block" />

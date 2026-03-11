@@ -421,9 +421,10 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                     <div className="flex-none flex justify-between items-center bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b-2 border-cyan-500/30 shadow-lg z-10 px-4 py-2 h-20 relative overflow-hidden">
                         {/* Subtle animated glow effect */}
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent opacity-50"></div>
-                        <div className="flex flex-col justify-center cursor-pointer group relative z-10 flex-shrink-0" onClick={onReturnToMenu}>
-                            <h1 className="text-xl font-black italic text-white tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-400">UPS</span> <span className="text-sm font-normal text-slate-400">PARALLEL</span></h1>
-                            <div className={`text-[10px] font-mono tracking-wide mt-1 ${state.systemMode === ParallelSystemMode.ONLINE_PARALLEL ? 'text-green-400' : state.systemMode === ParallelSystemMode.BATTERY_PARALLEL ? 'text-orange-400 animate-pulse' : state.systemMode === ParallelSystemMode.DEGRADED_REDUNDANCY ? 'text-yellow-400' : state.systemMode === ParallelSystemMode.EMERGENCY_SHUTDOWN ? 'text-red-500 animate-pulse' : 'text-cyan-300/70'}`}>
+                        <div className="flex flex-col justify-center cursor-pointer group relative z-10 flex-shrink-0 mt-2" onClick={onReturnToMenu}>
+                            <h1 className="text-xl font-black italic pl-4 pr-1 text-white tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-400">UPS</span> <span className="text-sm font-normal text-slate-400">PARALLEL</span></h1>
+                            <div className="text-[9px] text-cyan-400/80 font-mono tracking-wider mt-1 pl-4 uppercase">IEC 62040-3 VFI-SS-111 & IEEE 3006.7 Compliant Scheme</div>
+                            <div className={`text-[10px] pl-4 font-mono tracking-wide mt-1 ${state.systemMode === ParallelSystemMode.ONLINE_PARALLEL ? 'text-green-400' : state.systemMode === ParallelSystemMode.BATTERY_PARALLEL ? 'text-orange-400 animate-pulse' : state.systemMode === ParallelSystemMode.DEGRADED_REDUNDANCY ? 'text-yellow-400' : state.systemMode === ParallelSystemMode.EMERGENCY_SHUTDOWN ? 'text-red-500 animate-pulse' : 'text-cyan-300/70'}`}>
                                 {state.systemMode.replace(/_/g, ' ')} {state.redundancyOK ? '✓' : '⚠'}
                             </div>
                         </div>
@@ -592,7 +593,7 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                                 onComponentClick={setSelectedComp}
                             />
                         </div>
-                        <div className="flex-none h-48 flex gap-0 border-t-2 border-cyan-500/20 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+                        <div className="flex-none h-36 flex gap-0 border-t-2 border-cyan-500/20 bg-gradient-to-b from-slate-900 to-slate-950 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
                             <div className="w-1/2 h-full border-r border-slate-800">
                                 <ParallelWaveforms state={state} />
                             </div>

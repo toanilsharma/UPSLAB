@@ -26,7 +26,7 @@ export const ParallelProcedurePanel: React.FC<ProcedurePanelProps> = ({
 
     if (!procedure) {
         return (
-            <div className="h-full p-4 flex flex-col gap-4 overflow-y-auto">
+            <div className="h-full p-4 pl-6 flex flex-col gap-4 overflow-y-auto">
                 <h2 className="text-xl font-bold text-slate-200">Parallel SOPs</h2>
 
                 <button onClick={() => onSelectProcedure('sys_maint_bypass')} className="bg-slate-700 hover:bg-blue-600 p-3 rounded text-left border border-slate-600 transition-colors">
