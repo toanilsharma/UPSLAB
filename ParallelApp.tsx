@@ -308,6 +308,8 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
             if (comp === 'rectifier') {
                 if (action === 'START') targetModule.rectifier.status = ComponentStatus.STARTING;
                 if (action === 'STOP') targetModule.rectifier.status = ComponentStatus.OFF;
+                if (action === 'BOOST') targetModule.rectifier.boostCharge = true;
+                if (action === 'BOOST_OFF') targetModule.rectifier.boostCharge = false;
                 if (action === 'RESET' && targetModule.rectifier.status === ComponentStatus.FAULT) {
                     targetModule.rectifier.status = ComponentStatus.OFF;
                 }

@@ -107,12 +107,21 @@ export const ParallelFaceplate: React.FC<FaceplateProps> = ({ type, data, onClos
                                 >
                                     STOP
                                 </button>
-                                <button
+                                 <button
                                     onClick={() => onAction('RESET')}
                                     className="col-span-2 bg-blue-900/30 hover:bg-blue-600 text-blue-100 py-2 rounded text-xs font-bold border border-blue-800 transition-colors"
                                 >
                                     FAULT RESET / ACKNOWLEDGE
                                 </button>
+                                {compName === 'rectifier' && (
+                                    <button 
+                                        onClick={() => onAction(data.boostCharge ? 'BOOST_OFF' : 'BOOST')} 
+                                        disabled={status !== 'NORMAL'}
+                                        className={`col-span-2 py-2 rounded text-xs font-bold border transition-colors ${data.boostCharge ? 'bg-amber-600 border-amber-400 text-white animate-pulse' : 'bg-slate-700 hover:bg-amber-700 border-slate-600 text-amber-200'}`}
+                                    >
+                                        {data.boostCharge ? '⚡ BOOST CHARGE ACTIVE' : '🚀 ENABLE BOOST CHARGE'}
+                                    </button>
+                                )}
                             </>
                         )}
                     </div>

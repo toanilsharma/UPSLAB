@@ -110,6 +110,15 @@ export const Faceplate: React.FC<FaceplateProps> = ({ type, data, onClose, onAct
                             >
                                 FAULT RESET / ACKNOWLEDGE
                             </button>
+                            {type === 'rectifier' && (
+                                <button 
+                                    onClick={() => onAction(data.boostCharge ? 'BOOST_OFF' : 'BOOST')} 
+                                    disabled={status !== 'NORMAL'}
+                                    className={`col-span-2 py-2 rounded text-xs font-bold border transition-colors ${data.boostCharge ? 'bg-amber-600 border-amber-400 text-white animate-pulse' : 'bg-slate-700 hover:bg-amber-700 border-slate-600 text-amber-200'}`}
+                                >
+                                    {data.boostCharge ? '⚡ BOOST CHARGE ACTIVE' : '🚀 ENABLE BOOST CHARGE'}
+                                </button>
+                            )}
                         </>
                     )}
                 </div>

@@ -120,18 +120,20 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
 
             s.components.rectifier.startTimer = Math.max(0, s.components.rectifier.startTimer - 0.2);
 
-            // Voltage builds linearly from 0 to 220 over the 10 seconds
+            // Voltage builds linearly to target over the 10 seconds
+            const targetVoltage = s.components.rectifier.boostCharge ? 235 : 225;
             const progress = (10.0 - s.components.rectifier.startTimer) / 10.0;
-            s.components.rectifier.voltageOut = 220 * progress;
+            s.components.rectifier.voltageOut = targetVoltage * progress;
 
             if (s.components.rectifier.startTimer <= 0) {
                 s.components.rectifier.status = ComponentStatus.NORMAL;
-                s.components.rectifier.voltageOut = 220;
+                s.components.rectifier.voltageOut = targetVoltage;
                 s.components.rectifier.startTimer = 0;
             }
         } else if (s.components.rectifier.status === ComponentStatus.NORMAL) {
             // PID Simulation: Slight fluctuation around setpoint
-            s.components.rectifier.voltageOut = 220 + (Math.sin(now / 2000) * 0.2);
+            const targetVoltage = s.components.rectifier.boostCharge ? 235 : 225;
+            s.components.rectifier.voltageOut = targetVoltage + (Math.sin(now / 2000) * 0.2);
             s.components.rectifier.startTimer = 0;
             s.components.rectifier.prechargePct = 100;
             s.components.rectifier.walkInPct = 100;
@@ -171,13 +173,14 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     s.currents.battery = 0;
     if (batteryConnected) {
         // Peukert-ish approximation for Open Circuit Voltage based on Charge %
-        // 100% = 220V (Float), 0% = 155V (Cutoff) for 220V DC system
+        // OEM VRLA (100-cell): 100% = 212V, 0% = 180V
+        // Float = 225V, Boost = 235V
         // Non-linear curve: V drops fast at 100->90, plateaus, then drops fast 20->0
         let battCurveFactor = 1.0;
         if (s.battery.chargeLevel > 90) battCurveFactor = 1.05; // Surface charge
         else if (s.battery.chargeLevel < 20) battCurveFactor = 0.90; // Knee of curve
 
-        const battOpenCircuitV = 155 + ((s.battery.chargeLevel / 100) * (220 - 155) * battCurveFactor);
+        const battOpenCircuitV = 180 + ((s.battery.chargeLevel / 100) * (212 - 180) * battCurveFactor);
         
         // Update Internal Resistance
         s.battery.ri = calculateInternalResistance(s.battery.chargeLevel, s.battery.temp);
@@ -388,7 +391,7 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     // Load Calculation
     const load1 = b[BreakerId.Load1] ? 60 : 0; // Load A is bigger
     const load2 = b[BreakerId.Load2] ? 40 : 0;
-    const totalLoadAmps = (s.voltages.loadBus > 200) ? (load1 + load2) : 0;
+    const totalLoadAmps = (s.voltages.loadBus > 90) ? (load1 + load2) : 0;
 
     s.currents.output = totalLoadAmps;
     

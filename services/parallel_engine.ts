@@ -52,16 +52,18 @@ function processModule(
             }
             module.rectifier.startTimer = Math.max(0, module.rectifier.startTimer - 0.2);
             
+            const targetVoltage = module.rectifier.boostCharge ? 235 : 225;
             const progress = (10.0 - module.rectifier.startTimer) / 10.0;
-            module.rectifier.voltageOut = 220 * progress;
+            module.rectifier.voltageOut = targetVoltage * progress;
 
             if (module.rectifier.startTimer <= 0) {
                 module.rectifier.status = ComponentStatus.NORMAL;
-                module.rectifier.voltageOut = 220;
+                module.rectifier.voltageOut = targetVoltage;
                 module.rectifier.startTimer = 0;
             }
         } else if (module.rectifier.status === ComponentStatus.NORMAL) {
-            module.rectifier.voltageOut = 220 + (Math.sin(now / 2000) * 0.2);
+            const targetVoltage = module.rectifier.boostCharge ? 235 : 225;
+            module.rectifier.voltageOut = targetVoltage + (Math.sin(now / 2000) * 0.2);
             module.rectifier.startTimer = 0;
             module.rectifier.prechargePct = 100;
             module.rectifier.walkInPct = 100;
@@ -99,7 +101,7 @@ function processModule(
         if (module.battery.chargeLevel > 90) battCurveFactor = 1.05; // Surface charge
         else if (module.battery.chargeLevel < 20) battCurveFactor = 0.90; // Knee of curve
 
-        const battOpenCircuitV = 155 + ((module.battery.chargeLevel / 100) * (220 - 155) * battCurveFactor);
+        const battOpenCircuitV = 180 + ((module.battery.chargeLevel / 100) * (212 - 180) * battCurveFactor);
 
         // Update Internal Resistance
         module.battery.ri = calculateInternalResistance(module.battery.chargeLevel, module.battery.temp);
@@ -337,7 +339,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
         if (module.staticSwitch.mode === 'INVERTER') {
             // Failover Conditions
             // PARALLEL LOGIC FIX: Do NOT switch to bypass if the other module is holding the load
-            const loadBusEnergized = s.voltages.loadBus > 200;
+            const loadBusEnergized = s.voltages.loadBus > 90;
 
             if (!inverterReady && bypassAvailable) {
                 // Only go to bypass if the SYSTEM is losing power.
@@ -401,8 +403,8 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
                 const loadFactor = s.modules.module1.inverter.loadPct / 100;
                 s.modules.module1.inverter.efficiency = Math.min(0.96, Math.max(0.85, 0.96 - (0.1 * Math.pow(1 - loadFactor, 2))));
 
-                // Battery discharge if on battery
-                if (s.modules.module1.dcBusVoltage < 500 && s.modules.module1.battery.chargeLevel > 0) {
+                // Battery discharge if on battery (Rectifier is NOT the DC Source)
+                if (s.modules.module1.rectifier.status !== ComponentStatus.NORMAL && s.modules.module1.battery.chargeLevel > 0) {
                     const powerRequired = (ampsPerModule * 110) / s.modules.module1.inverter.efficiency;
                     const dcAmps = powerRequired / s.modules.module1.dcBusVoltage;
                     s.modules.module1.battery.current = -dcAmps;
@@ -431,8 +433,8 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
                 const loadFactor = s.modules.module2.inverter.loadPct / 100;
                 s.modules.module2.inverter.efficiency = Math.min(0.96, Math.max(0.85, 0.96 - (0.1 * Math.pow(1 - loadFactor, 2))));
 
-                // Battery discharge if on battery
-                if (s.modules.module2.dcBusVoltage < 500 && s.modules.module2.battery.chargeLevel > 0) {
+                // Battery discharge if on battery (Rectifier is NOT the DC Source)
+                if (s.modules.module2.rectifier.status !== ComponentStatus.NORMAL && s.modules.module2.battery.chargeLevel > 0) {
                     const powerRequired = (ampsPerModule * 110) / s.modules.module2.inverter.efficiency;
                     const dcAmps = powerRequired / s.modules.module2.dcBusVoltage;
                     s.modules.module2.battery.current = -dcAmps;

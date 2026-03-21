@@ -18,13 +18,13 @@ const BATTERY_DEFAULTS = {
     chargeLevel: 100,
     temp: 25,
     health: 100,
-    voltage: 220,
+    voltage: 225,
     ri: 0.015,
     soh: 100
 };
 
 const MODULE_DEFAULTS = {
-    rectifier: { ...COMPONENT_DEFAULTS, voltageOut: 220 },
+    rectifier: { ...COMPONENT_DEFAULTS, voltageOut: 225 },
     inverter: { ...COMPONENT_DEFAULTS, voltageOut: 110, temperature: 45 },
     staticSwitch: { 
         mode: 'INVERTER' as const, 
@@ -35,7 +35,7 @@ const MODULE_DEFAULTS = {
         isIsolated: false 
     },
     battery: { ...BATTERY_DEFAULTS },
-    dcBusVoltage: 220,
+    dcBusVoltage: 225,
     effectiveCapacityAh: 100
 };
 

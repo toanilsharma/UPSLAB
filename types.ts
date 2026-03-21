@@ -37,7 +37,9 @@ export enum UPSCommand {
   TRANSFER_MAINT = 'CMD_TRANSFER_TO_MAINT',
   RETURN_MAINT = 'CMD_RETURN_FROM_MAINT',
   EPO = 'CMD_EPO',
-  ACK_ALARM = 'CMD_ACK_ALARM'
+  ACK_ALARM = 'CMD_ACK_ALARM',
+  RECT_BOOST = 'CMD_RECT_BOOST',
+  RECT_BOOST_OFF = 'CMD_RECT_BOOST_OFF'
 }
 
 export interface ComponentDetail {
@@ -52,6 +54,7 @@ export interface ComponentDetail {
   thd?: number;        // Total Harmonic Distortion (%)
   prechargePct?: number; // DC Pre-charge progress (0-100%)
   walkInPct?: number;    // Rectifier Walk-in progress (0-100%)
+  boostCharge?: boolean; // VRLA Boost Charge active mode
 }
 
 export interface SimulationState {

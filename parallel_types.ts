@@ -55,6 +55,7 @@ export interface ComponentDetail {
     thd?: number;        // Total Harmonic Distortion (%)
     prechargePct?: number; // DC Pre-charge progress (0-100%)
     walkInPct?: number;    // Rectifier Walk-in progress (0-100%)
+    boostCharge?: boolean; // VRLA Boost Charge active mode
 }
 
 export interface StaticSwitchDetail {

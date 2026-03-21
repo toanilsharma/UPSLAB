@@ -130,6 +130,10 @@ const Breaker = ({ id, x, y, isOpen, onClick, label, vertical = false, isEnergiz
     );
 };
 
+const AmpRating = ({ x, y, rating }: { x: number, y: number, rating: string }) => (
+    <text x={x} y={y} textAnchor="middle" className="fill-blue-300 text-[10px] font-bold font-mono tracking-tighter mix-blend-screen">{rating}</text>
+);
+
 const LoadBox = ({ x, y, label, isSwitchedOn, isPowered }: any) => {
     let stroke = 'stroke-slate-600';
     let fill = 'fill-slate-800';
@@ -153,9 +157,6 @@ const LoadBox = ({ x, y, label, isSwitchedOn, isPowered }: any) => {
 
     return (
         <g transform={`translate(${x}, ${y})`}>
-            {/* Connection Line from Top (Breaker) */}
-            <line x1={0} y1={-30} x2={0} y2={0} stroke={stroke} strokeWidth="2" />
-
             {/* Server Rack Symbol */}
             <rect x={-20} y={0} width={40} height={35} rx="2" className={`${stroke} ${fill} stroke-2 transition-all duration-300`} style={{ filter: glow }} />
 
@@ -382,10 +383,12 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
 
                 {/* Load Drops (Breakers to Loads) */}
                 <Node x={670} y={110} />
-                <PowerLine d="M670,110 L670,200" energized={loadLive} currentFlow={outputAmps / 2} />
+                <PowerLine d="M670,110 L670,160" energized={loadLive} currentFlow={outputAmps / 2} />
+                <PowerLine d="M670,240 L670,260" energized={loadLive && breakers[BreakerId.Load1]} currentFlow={breakers[BreakerId.Load1] ? outputAmps / 2 : 0} />
 
                 <Node x={770} y={110} />
-                <PowerLine d="M770,110 L770,200" energized={loadLive} currentFlow={outputAmps / 2} />
+                <PowerLine d="M770,110 L770,160" energized={loadLive} currentFlow={outputAmps / 2} />
+                <PowerLine d="M770,240 L770,260" energized={loadLive && breakers[BreakerId.Load2]} currentFlow={breakers[BreakerId.Load2] ? outputAmps / 2 : 0} />
 
                 {/* --- COMPONENTS --- */}
 
@@ -432,18 +435,25 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
 
                 {/* --- BREAKERS --- */}
                 <Breaker id={BreakerId.Q2} x={160} y={80} label="Q2" isOpen={!breakers[BreakerId.Q2]} isEnergized={bypassPostQ2} onClick={() => onBreakerToggle(BreakerId.Q2)} />
+                <AmpRating x={160} y={106} rating="125A" />
                 <Breaker id={BreakerId.Q1} x={160} y={140} label="Q1" isOpen={!breakers[BreakerId.Q1]} isEnergized={inputToRect} onClick={() => onBreakerToggle(BreakerId.Q1)} />
+                <AmpRating x={160} y={166} rating="125A" />
 
                 <g>
                     <rect x={320} y={15} width={60} height={50} className="fill-amber-500/10 stroke-none" />
                     <Breaker id={BreakerId.Q3} x={350} y={40} label="Q3" isOpen={!breakers[BreakerId.Q3]} isEnergized={q3Live} isWarning onClick={() => onBreakerToggle(BreakerId.Q3)} />
+                    <AmpRating x={350} y={23} rating="125A" />
                 </g>
 
                 <Breaker id={BreakerId.Q4} x={620} y={110} label="Q4" isOpen={!breakers[BreakerId.Q4]} isEnergized={loadLive && breakers[BreakerId.Q4]} onClick={() => onBreakerToggle(BreakerId.Q4)} />
+                <AmpRating x={620} y={136} rating="400A" />
                 <Breaker id={BreakerId.QF1} x={350} y={290} label="QF1" vertical isOpen={!breakers[BreakerId.QF1]} isEnergized={breakers[BreakerId.QF1] && (dcBusLive || state.battery.chargeLevel > 0)} onClick={() => onBreakerToggle(BreakerId.QF1)} />
+                <AmpRating x={320} y={300} rating="400A" />
 
                 <Breaker id={BreakerId.Load1} x={670} y={200} label="CB-L1" vertical isOpen={!breakers[BreakerId.Load1]} isEnergized={loadLive && breakers[BreakerId.Load1]} onClick={() => onBreakerToggle(BreakerId.Load1)} />
+                <AmpRating x={640} y={210} rating="400A" />
                 <Breaker id={BreakerId.Load2} x={770} y={200} label="CB-L2" vertical isOpen={!breakers[BreakerId.Load2]} isEnergized={loadLive && breakers[BreakerId.Load2]} onClick={() => onBreakerToggle(BreakerId.Load2)} />
+                <AmpRating x={740} y={210} rating="300A" />
 
                 {/* --- LOAD BOXES (End of Line) --- */}
                 <LoadBox x={670} y={260} label="SERVER RACK A" isSwitchedOn={breakers[BreakerId.Load1]} isPowered={loadLive && breakers[BreakerId.Load1]} />

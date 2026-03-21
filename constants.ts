@@ -13,7 +13,7 @@ export const INITIAL_STATE: SimulationState = {
   voltages: {
     utilityInput: 415,
     bypassInput: 415,
-    dcBus: 220,
+    dcBus: 225,
     loadBus: 110,
     inverterPhase: 0,
     bypassPhase: 0,
@@ -33,7 +33,7 @@ export const INITIAL_STATE: SimulationState = {
     chargeLevel: 100,
     temp: 25,
     health: 100,
-    voltage: 220,
+    voltage: 225,
     current: 2, // trickle charge
     cycleCount: 50, // Simulated history
     nominalCapacityAh: 100, // 100Ah VRLA battery bank
@@ -48,7 +48,7 @@ export const INITIAL_STATE: SimulationState = {
       temperature: 35,
       loadPct: 60,
       efficiency: 0.95,
-      voltageOut: 220,
+      voltageOut: 225,
       kva: 65,
       pf: 0.92,
       thd: 1.5,

@@ -369,6 +369,20 @@ export class UPSController {
             case UPSCommand.ACK_ALARM:
                 logMsg = 'COMMAND: Alarms Acknowledged';
                 break;
+            
+            case UPSCommand.RECT_BOOST:
+                if (next.components.rectifier.status === ComponentStatus.NORMAL) {
+                    next.components.rectifier.boostCharge = true;
+                    logMsg = 'COMMAND: Rectifier Boost Charge Enabled';
+                } else {
+                    logMsg = 'ERROR: Cannot Enable Boost (Rectifier not Normal)';
+                }
+                break;
+            
+            case UPSCommand.RECT_BOOST_OFF:
+                next.components.rectifier.boostCharge = false;
+                logMsg = 'COMMAND: Rectifier Boost Charge Disabled';
+                break;
         }
 
         return { newState: next, log: logMsg };

@@ -36,7 +36,7 @@ const PowerLine = ({ d, energized, warning = false, thick = false, currentFlow =
     const baseColor = energized
         ? (warning ? '#f59e0b' : '#22c55e')  // Amber for bypass, Green for normal
         : '#ffffff';  // White when de-energized
-        
+
     const baseOpacity = energized ? 1 : 0.15; // Dim white
     const strokeWidth = thick ? 6 : 4;
 
@@ -55,17 +55,17 @@ const PowerLine = ({ d, energized, warning = false, thick = false, currentFlow =
     return (
         <>
             {/* Base Path (Static) */}
-            <path 
-                d={d} 
-                fill="none" 
-                stroke={baseColor} 
-                strokeWidth={strokeWidth} 
+            <path
+                d={d}
+                fill="none"
+                stroke={baseColor}
+                strokeWidth={strokeWidth}
                 opacity={baseOpacity}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className={`transition-colors duration-500 ${noiseEffect}`}
             />
-            
+
             {/* Flow Animation (Overlay) */}
             {isFlowing && (
                 <motion.path
@@ -78,15 +78,15 @@ const PowerLine = ({ d, energized, warning = false, thick = false, currentFlow =
                     strokeLinejoin="round"
                     initial={{ strokeDashoffset: 0 }}
                     animate={{ strokeDashoffset: reverse ? [0, 20] : [0, -20] }}
-                    transition={{ 
-                        duration: duration, 
-                        repeat: Infinity, 
-                        ease: "linear" 
+                    transition={{
+                        duration: duration,
+                        repeat: Infinity,
+                        ease: "linear"
                     }}
                     style={{ opacity: 0.8 }}
                 />
             )}
-            
+
             {/* Harmonic Distortion Ghosting (Phase 1) */}
             {thd > 3 && (
                 <path
@@ -106,7 +106,7 @@ const PowerLine = ({ d, energized, warning = false, thick = false, currentFlow =
 const FlowIndicator = ({ d, energized, reverse = false }: { d: string, energized: boolean, reverse?: boolean }) => {
     // If energized, show it!
     if (!energized) return null;
-    
+
     // Make it much more visible as requested
     return (
         <motion.path
@@ -312,7 +312,7 @@ const StaticSwitchInternal = ({ mode, inFlowing, byFlowing, isIsolated }: { mode
             <g transform="translate(-6, -18) rotate(60)">
                 <path d="M-3,-5 L3,0 L-3,5 Z" fill={isBypass ? activeColor : 'none'} stroke={isBypass ? activeColor : inactiveColor} strokeWidth="1" />
             </g>
-            
+
             {/* Inverter SCR: Midpoint of (-25,12) and (12,12) approx (-6, 12) */}
             <g transform="translate(-6, 12)">
                 <path d="M-3,-5 L3,0 L-3,5 Z" fill={!isBypass ? activeColor : 'none'} stroke={!isBypass ? activeColor : inactiveColor} strokeWidth="1" />
@@ -322,7 +322,7 @@ const StaticSwitchInternal = ({ mode, inFlowing, byFlowing, isIsolated }: { mode
             <circle cx="12" cy="12" r="3" fill="#e2e8f0" />
             <line x1="12" y1="12" x2="25" y2="12" stroke={activeColor} strokeWidth="4" />
             {(inFlowing || byFlowing) && (
-                 <motion.path
+                <motion.path
                     d="M12,12 L25,12"
                     fill="none"
                     stroke="#ffffff"
@@ -356,8 +356,8 @@ const LoadSymbol = ({ x, y, label, isEnergized, loadKW, onClick }: any) => {
             {[0, 1, 2, 3].map(i => (
                 <g key={i}>
                     <rect x="-14" y={8 + i * 10} width="28" height="6" rx="1" fill="#1e293b" />
-                    <circle cx="-8" cy={11 + i * 10} r="2" fill={isEnergized ? '#22c55e' : '#ef4444'} />
-                    <circle cx="-2" cy={11 + i * 10} r="2" fill={isEnergized ? '#22c55e' : '#ef4444'} />
+                    <circle cx="-8" cy={11 + i * 10} r="2" fill={isEnergized ? '#22c55e' : '#ef4444'} className={isEnergized ? "animate-pulse" : ""} style={isEnergized ? {animationDelay: `${i*0.2}s`} : {}} />
+                    <circle cx="-2" cy={11 + i * 10} r="2" fill={isEnergized ? '#22c55e' : '#ef4444'} className={isEnergized ? "animate-pulse" : ""} style={isEnergized ? {animationDelay: `${i*0.2}s`} : {}} />
                 </g>
             ))}
 
@@ -391,7 +391,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
             />
 
             {/* Increased ViewBox Height to prevent bottom clipping after spacing adjustments */}
-            <svg viewBox="0 0 900 520" className="w-full h-full">
+            <svg viewBox="0 0 900 520" className="w-full h-full min-w-[900px] min-h-[520px]">
 
                 {/* Drawing title block */}
                 <g transform="translate(10, 15)">
@@ -418,9 +418,10 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     <FlowIndicator d="M80,52 L196,52" energized={voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_1]} />
                     <FlowIndicator d="M244,52 L500,52" energized={voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_1]} />
 
-                    <Breaker id={ParallelBreakerId.Q2_1} x={160} y={40} label="Q2-1" isOpen={!breakers[ParallelBreakerId.Q2_1]} isEnergized={voltages.utilityInput > 50} onClick={() => onBreakerToggle(ParallelBreakerId.Q2_1)} />
-                    <Breaker id={ParallelBreakerId.Q1_1} x={160} y={100} label="Q1-1" isOpen={!breakers[ParallelBreakerId.Q1_1]} isEnergized={voltages.utilityInput > 50} onClick={() => onBreakerToggle(ParallelBreakerId.Q1_1)} />
-                    <AmpRating x={220} y={78} rating="250A" />
+                    <Breaker id={ParallelBreakerId.Q2_1} x={220} y={52} label="Q2-1" isOpen={!breakers[ParallelBreakerId.Q2_1]} isEnergized={voltages.utilityInput > 50} onClick={() => onBreakerToggle(ParallelBreakerId.Q2_1)} />
+                    <AmpRating x={220} y={78} rating="125A" />
+                    <Breaker id={ParallelBreakerId.Q1_1} x={140} y={112} label="Q1-1" isOpen={!breakers[ParallelBreakerId.Q1_1]} isEnergized={voltages.utilityInput > 50} onClick={() => onBreakerToggle(ParallelBreakerId.Q1_1)} />
+                    <AmpRating x={140} y={138} rating="125A" />
 
                     {/* MAIN PATH (y=112) */}
                     <PowerLine d="M80,112 L116,112" energized={voltages.utilityInput > 50} thick />
@@ -456,7 +457,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                                 <FlowIndicator d="M370,112 L370,131" energized={battFlowActive} reverse={isDischarging} />
                                 
                                 <Breaker id={ParallelBreakerId.QF1_1} x={370} y={155} label="QF1-1" vertical isOpen={!breakers[ParallelBreakerId.QF1_1]} isEnergized={modules.module1.dcBusVoltage > 50} onClick={() => onBreakerToggle(ParallelBreakerId.QF1_1)} />
-                                <AmpRating x={395} y={160} rating="100A" />
+                                <AmpRating x={340} y={165} rating="100A" />
 
                                 <PowerLine d="M370,179 L370,185" energized={modules.module1.dcBusVoltage > 50 || modules.module1.battery.voltage > 10} />
                                 <FlowIndicator d="M370,179 L370,185" energized={Math.abs(modules.module1.battery.current) > 1} reverse={isDischarging} />
@@ -492,8 +493,8 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
 
                     {/* STS */}
                     <ComponentBox x={500} y={55} w={50} h={90} label="STS" type="module1.staticSwitch" status={modules.module1.staticSwitch.isIsolated ? ComponentStatus.ALARM : ComponentStatus.NORMAL} onClick={onComponentClick}>
-                        <StaticSwitchInternal 
-                            mode={modules.module1.staticSwitch.mode} 
+                        <StaticSwitchInternal
+                            mode={modules.module1.staticSwitch.mode}
                             // Inverter Flow: Mode is INV AND Inverter is Normal AND NOT Isolated
                             inFlowing={modules.module1.staticSwitch.mode === 'INVERTER' && modules.module1.inverter.status === ComponentStatus.NORMAL && !modules.module1.staticSwitch.isIsolated}
                             // Bypass Flow: Mode is BYP AND Bypass is Energized AND NOT Isolated
@@ -507,7 +508,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     <FlowIndicator d="M550,112 L576,112" energized={(modules.module1.staticSwitch.mode === 'INVERTER' ? modules.module1.inverter.status === ComponentStatus.NORMAL : (voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_1])) && !modules.module1.staticSwitch.isIsolated} />
 
                     <Breaker id={ParallelBreakerId.Q4_1} x={600} y={112} label="Q4-1" isOpen={!breakers[ParallelBreakerId.Q4_1]} isEnergized={modules.module1.staticSwitch.mode === 'INVERTER' ? modules.module1.inverter.status === ComponentStatus.NORMAL : (voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_1])} onClick={() => onBreakerToggle(ParallelBreakerId.Q4_1)} />
-                    <AmpRating x={600} y={138} rating="300A" />
+                    <AmpRating x={600} y={138} rating="400A" />
 
                     {/* Q4 to bus - FIX: Start at terminal x+24 (624) */}
                     <PowerLine d="M624,112 L660,112" energized={breakers[ParallelBreakerId.Q4_1] && voltages.loadBus > 50} thick />
@@ -516,21 +517,21 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
 
                     {/* MAINTENANCE BYPASS - Separate path from UTILITY-B */}
                     {/* MAINTENANCE BYPASS - Fixed Text Overlap */}
-                    <text x="203" y="24" textAnchor="middle" className="fill-orange-400 text-[11px] font-bold">MAINT BYPASS</text>
+                    <text x="160" y="25" textAnchor="middle" className="fill-orange-400 text-[11px] font-bold">MAINT BYPASS</text>
                     <PowerLine d="M100,52 L100,35 L306,35" energized={voltages.utilityInput > 50} warning />
                     <PowerLine d="M354,35 L660,35 L660,112" energized={breakers[ParallelBreakerId.Q3_1] && voltages.utilityInput > 50} warning />
                     <FlowIndicator d="M100,52 L100,35 L306,35" energized={voltages.utilityInput > 50} />
                     <FlowIndicator d="M354,35 L660,35 L660,112" energized={breakers[ParallelBreakerId.Q3_1] && voltages.utilityInput > 50} />
-                    
+
                     <Node x={100} y={52} />
                     <Breaker id={ParallelBreakerId.Q3_1} x={330} y={35} label="Q3-1" isOpen={!breakers[ParallelBreakerId.Q3_1]} isEnergized={voltages.utilityInput > 50} onClick={() => onBreakerToggle(ParallelBreakerId.Q3_1)} />
-                    <AmpRating x={330} y={18} rating="400A" />
+                    <AmpRating x={330} y={18} rating="125A" />
                 </g>
 
-                {/* Load share bus between modules - MOVED to x=460 to avoid Battery Overlap */}
+                {/* Load share bus between modules - MOVED to x=480 to avoid INV Box Overlap */}
                 <g>
-                    <line x1="460" y1="190" x2="460" y2="305" stroke="#22c55e" strokeWidth="2" strokeDasharray="6,4" />
-                    <text x="450" y="245" className="fill-green-400 text-[9px] font-bold" transform="rotate(-90, 450, 245)">SYNC</text>
+                    <line x1="480" y1="190" x2="480" y2="305" stroke="#22c55e" strokeWidth="2" strokeDasharray="6,4" />
+                    <text x="470" y="245" className="fill-green-400 text-[9px] font-bold" transform="rotate(-90, 470, 245)">SYNC</text>
                 </g>
 
                 {/* ============ MODULE 2 (BOTTOM) ============ */}
@@ -553,9 +554,10 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     <FlowIndicator d="M80,52 L196,52" energized={voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_2]} />
                     <FlowIndicator d="M244,52 L500,52" energized={voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_2]} />
 
-                    <Breaker id={ParallelBreakerId.Q2_2} x={160} y={40} label="Q2-2" isOpen={!breakers[ParallelBreakerId.Q2_2]} isEnergized={voltages.utilityInput > 50} onClick={() => onBreakerToggle(ParallelBreakerId.Q2_2)} />
-                    <Breaker id={ParallelBreakerId.Q1_2} x={160} y={100} label="Q1-2" isOpen={!breakers[ParallelBreakerId.Q1_2]} isEnergized={voltages.utilityInput > 50} onClick={() => onBreakerToggle(ParallelBreakerId.Q1_2)} />
-                    <AmpRating x={220} y={78} rating="250A" />
+                    <Breaker id={ParallelBreakerId.Q2_2} x={220} y={52} label="Q2-2" isOpen={!breakers[ParallelBreakerId.Q2_2]} isEnergized={voltages.utilityInput > 50} onClick={() => onBreakerToggle(ParallelBreakerId.Q2_2)} />
+                    <AmpRating x={220} y={78} rating="125A" />
+                    <Breaker id={ParallelBreakerId.Q1_2} x={140} y={112} label="Q1-2" isOpen={!breakers[ParallelBreakerId.Q1_2]} isEnergized={voltages.utilityInput > 50} onClick={() => onBreakerToggle(ParallelBreakerId.Q1_2)} />
+                    <AmpRating x={140} y={138} rating="125A" />
 
                     {/* MAIN PATH */}
                     <PowerLine d="M80,112 L116,112" energized={voltages.utilityInput > 50} thick />
@@ -591,7 +593,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                                 <FlowIndicator d="M370,112 L370,131" energized={battFlowActive} reverse={isDischarging} />
                                 
                                 <Breaker id={ParallelBreakerId.QF1_2} x={370} y={155} label="QF1-2" vertical isOpen={!breakers[ParallelBreakerId.QF1_2]} isEnergized={modules.module2.dcBusVoltage > 50} onClick={() => onBreakerToggle(ParallelBreakerId.QF1_2)} />
-                                <AmpRating x={395} y={160} rating="100A" />
+                                <AmpRating x={340} y={165} rating="400A" />
 
                                 <PowerLine d="M370,179 L370,185" energized={modules.module2.dcBusVoltage > 50 || modules.module2.battery.voltage > 10} />
                                 <FlowIndicator d="M370,179 L370,185" energized={Math.abs(modules.module2.battery.current) > 1} reverse={isDischarging} />
@@ -627,11 +629,11 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
 
                     {/* STS */}
                     <ComponentBox x={500} y={55} w={50} h={90} label="STS" type="module2.staticSwitch" status={modules.module2.staticSwitch.isIsolated ? ComponentStatus.ALARM : ComponentStatus.NORMAL} onClick={onComponentClick}>
-                        <StaticSwitchInternal 
-                             mode={modules.module2.staticSwitch.mode}
-                             inFlowing={modules.module2.staticSwitch.mode === 'INVERTER' && modules.module2.inverter.status === ComponentStatus.NORMAL && !modules.module2.staticSwitch.isIsolated}
-                             byFlowing={modules.module2.staticSwitch.mode === 'BYPASS' && voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_2] && !modules.module2.staticSwitch.isIsolated}
-                             isIsolated={modules.module2.staticSwitch.isIsolated}
+                        <StaticSwitchInternal
+                            mode={modules.module2.staticSwitch.mode}
+                            inFlowing={modules.module2.staticSwitch.mode === 'INVERTER' && modules.module2.inverter.status === ComponentStatus.NORMAL && !modules.module2.staticSwitch.isIsolated}
+                            byFlowing={modules.module2.staticSwitch.mode === 'BYPASS' && voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_2] && !modules.module2.staticSwitch.isIsolated}
+                            isIsolated={modules.module2.staticSwitch.isIsolated}
                         />
                     </ComponentBox>
 
@@ -640,7 +642,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     <FlowIndicator d="M550,112 L576,112" energized={(modules.module2.staticSwitch.mode === 'INVERTER' ? modules.module2.inverter.status === ComponentStatus.NORMAL : (voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_2])) && !modules.module2.staticSwitch.isIsolated} />
 
                     <Breaker id={ParallelBreakerId.Q4_2} x={600} y={112} label="Q4-2" isOpen={!breakers[ParallelBreakerId.Q4_2]} isEnergized={modules.module2.staticSwitch.mode === 'INVERTER' ? modules.module2.inverter.status === ComponentStatus.NORMAL : (voltages.utilityInput > 50 && breakers[ParallelBreakerId.Q2_2])} onClick={() => onBreakerToggle(ParallelBreakerId.Q4_2)} />
-                    <AmpRating x={600} y={138} rating="300A" />
+                    <AmpRating x={600} y={138} rating="400A" />
 
                     {/* Q4 to bus */}
                     <PowerLine d="M624,112 L660,112" energized={breakers[ParallelBreakerId.Q4_2] && voltages.loadBus > 50} thick />
@@ -648,15 +650,15 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     <GroundSymbol x={660} y={118} />
 
                     {/* MAINTENANCE BYPASS - Fixed Text Overlap */}
-                    <text x="203" y="24" textAnchor="middle" className="fill-orange-400 text-[11px] font-bold">MAINT BYPASS</text>
+                    <text x="160" y="25" textAnchor="middle" className="fill-orange-400 text-[11px] font-bold">MAINT BYPASS</text>
                     <PowerLine d="M100,52 L100,35 L306,35" energized={voltages.utilityInput > 50} warning />
                     <PowerLine d="M354,35 L660,35 L660,112" energized={breakers[ParallelBreakerId.Q3_2] && voltages.utilityInput > 50} warning />
                     <FlowIndicator d="M100,52 L100,35 L306,35" energized={voltages.utilityInput > 50} />
                     <FlowIndicator d="M354,35 L660,35 L660,112" energized={breakers[ParallelBreakerId.Q3_2] && voltages.utilityInput > 50} />
-                    
+
                     <Node x={100} y={52} />
                     <Breaker id={ParallelBreakerId.Q3_2} x={330} y={35} label="Q3-2" isOpen={!breakers[ParallelBreakerId.Q3_2]} isEnergized={voltages.utilityInput > 50} onClick={() => onBreakerToggle(ParallelBreakerId.Q3_2)} />
-                    <AmpRating x={330} y={18} rating="400A" />
+                    <AmpRating x={330} y={18} rating="125A" />
                 </g>
 
                 {/* ============ LOAD BUS & DISTRIBUTION ============ */}
@@ -677,20 +679,20 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
                     <text x="55" y="265" className="fill-orange-400 text-[11px] font-bold">800A BUS</text>
 
                     {/* Load 1 branch */}
-                    <PowerLine d="M40,220 L100,220" energized={voltages.loadBus > 50 && breakers[ParallelBreakerId.Load1]} />
-                    <FlowIndicator d="M40,220 L100,220" energized={voltages.loadBus > 50 && breakers[ParallelBreakerId.Load1]} />
+                    <PowerLine d="M40,220 L76,220" energized={voltages.loadBus > 50} thick={false} />
+                    <FlowIndicator d="M40,220 L76,220" energized={voltages.loadBus > 50} />
                     <Breaker id={ParallelBreakerId.Load1} x={100} y={220} label="CB-L1" isOpen={!breakers[ParallelBreakerId.Load1]} isEnergized={voltages.loadBus > 50} onClick={() => onBreakerToggle(ParallelBreakerId.Load1)} />
-                    <AmpRating x={100} y={246} rating="200A" />
-                    <PowerLine d="M100,220 L160,220" energized={voltages.loadBus > 50 && breakers[ParallelBreakerId.Load1]} />
-                    <FlowIndicator d="M100,220 L160,220" energized={voltages.loadBus > 50 && breakers[ParallelBreakerId.Load1]} />
+                    <AmpRating x={100} y={246} rating="400A" />
+                    <PowerLine d="M124,220 L180,220" energized={voltages.loadBus > 50 && breakers[ParallelBreakerId.Load1]} />
+                    <FlowIndicator d="M124,220 L180,220" energized={voltages.loadBus > 50 && breakers[ParallelBreakerId.Load1]} />
 
                     {/* Load 2 branch */}
-                    <PowerLine d="M40,300 L100,300" energized={voltages.loadBus > 50 && breakers[ParallelBreakerId.Load2]} />
-                    <FlowIndicator d="M40,300 L100,300" energized={voltages.loadBus > 50 && breakers[ParallelBreakerId.Load2]} />
+                    <PowerLine d="M40,300 L76,300" energized={voltages.loadBus > 50} thick={false} />
+                    <FlowIndicator d="M40,300 L76,300" energized={voltages.loadBus > 50} />
                     <Breaker id={ParallelBreakerId.Load2} x={100} y={300} label="CB-L2" isOpen={!breakers[ParallelBreakerId.Load2]} isEnergized={voltages.loadBus > 50} onClick={() => onBreakerToggle(ParallelBreakerId.Load2)} />
-                    <AmpRating x={100} y={326} rating="200A" />
-                    <PowerLine d="M100,300 L160,300" energized={voltages.loadBus > 50 && breakers[ParallelBreakerId.Load2]} />
-                    <FlowIndicator d="M100,300 L160,300" energized={voltages.loadBus > 50 && breakers[ParallelBreakerId.Load2]} />
+                    <AmpRating x={100} y={326} rating="300A" />
+                    <PowerLine d="M124,300 L180,300" energized={voltages.loadBus > 50 && breakers[ParallelBreakerId.Load2]} />
+                    <FlowIndicator d="M124,300 L180,300" energized={voltages.loadBus > 50 && breakers[ParallelBreakerId.Load2]} />
                 </g>
 
                 {/* Load equipment */}

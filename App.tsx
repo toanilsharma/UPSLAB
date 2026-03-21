@@ -191,6 +191,8 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
             if (selectedComp === 'rectifier') {
                 if (action === 'START') cmd = UPSCommand.RECT_ON;
                 if (action === 'STOP') cmd = UPSCommand.RECT_OFF;
+                if (action === 'BOOST') cmd = UPSCommand.RECT_BOOST;
+                if (action === 'BOOST_OFF') cmd = UPSCommand.RECT_BOOST_OFF;
             }
             else if (selectedComp === 'inverter') {
                 if (action === 'START') cmd = UPSCommand.INV_ON;
