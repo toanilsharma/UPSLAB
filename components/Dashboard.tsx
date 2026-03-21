@@ -5,10 +5,10 @@ const MetricCard = ({ label, value, icon, subValue, color = "text-cyan-400" }: a
     <div className="flex flex-col bg-slate-950/50 border border-slate-800 rounded px-3 py-1 min-w-[120px]">
         <div className="flex items-center gap-2 mb-1">
             <span className="text-slate-500">{icon}</span>
-            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{label}</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{label}</span>
         </div>
         <div className={`text-sm font-mono font-black ${color}`}>{value}</div>
-        <div className="text-[9px] text-slate-600 font-medium">{subValue}</div>
+        <div className="text-[10px] text-slate-600 font-medium">{subValue}</div>
     </div>
 );
 
@@ -30,7 +30,7 @@ const DigitalMeter = ({ label, value, unit, min, max, alertLow, alertHigh }: any
 
     return (
         <div className={`flex flex-col bg-slate-950 border ${borderColor} ${bgGlow} rounded p-2 min-w-[100px] relative overflow-hidden transition-all duration-300`}>
-            <div className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-1">{label}</div>
+            <div className="text-[11px] text-slate-400 font-bold tracking-widest uppercase mb-1">{label}</div>
 
             <div className="flex items-baseline gap-1 z-10">
                 <span className={`text-2xl font-mono font-black ${statusColor} leading-none`}>
@@ -89,8 +89,8 @@ export const Dashboard = ({ state }: { state: any }) => {
                 label="Output"
                 value={state.voltages.loadBus}
                 unit="V"
-                min={0} max={500}
-                alertLow={400} alertHigh={440}
+                min={0} max={150}
+                alertLow={99} alertHigh={121}
             />
             <DigitalMeter
                 label="Battery"
@@ -108,9 +108,9 @@ export const Dashboard = ({ state }: { state: any }) => {
             <div className="h-10 w-px bg-slate-700 mx-2"></div>
 
             <div className="flex flex-col justify-center min-w-[160px]">
-                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">System Status</div>
+                <div className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">System Status</div>
                 <div className={`text-sm font-black tracking-tighter uppercase ${sysColor}`}>{sysStatus}</div>
-                <div className="text-[10px] text-slate-400 font-mono mt-1">
+                <div className="text-[11px] text-slate-400 font-mono mt-1">
                     LOAD: <span className="text-white">{(state.currents.output * 0.4).toFixed(1)} kW</span>
                 </div>
             </div>

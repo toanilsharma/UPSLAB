@@ -14,7 +14,7 @@ export const INITIAL_STATE: SimulationState = {
     utilityInput: 415,
     bypassInput: 415,
     dcBus: 220,
-    loadBus: 415,
+    loadBus: 110,
     inverterPhase: 0,
     bypassPhase: 0,
   },
@@ -60,7 +60,7 @@ export const INITIAL_STATE: SimulationState = {
       temperature: 48,
       loadPct: 55,
       efficiency: 0.94,
-      voltageOut: 415,
+      voltageOut: 110,
       kva: 60,
       pf: 0.91,
       thd: 0.8,
@@ -133,6 +133,13 @@ export const PROC_MAINT_BYPASS: Procedure = {
     },
     {
       id: 7,
+      description: 'Open Bypass Input Breaker (Q2).',
+      expectedAction: { type: 'BREAKER', target: BreakerId.Q2, value: false },
+      validationFn: (s) => s.breakers[BreakerId.Q2] === false,
+      hint: 'Isolate bypass power to fully de-energize the UPS.',
+    },
+    {
+      id: 8,
       description: 'Procedure Complete. UPS is isolated.',
       validationFn: (s) => true,
     }
@@ -161,7 +168,7 @@ export const PROC_RETURN_FROM_BYPASS: Procedure = {
     voltages: {
       ...INITIAL_STATE.voltages,
       dcBus: 0,
-      loadBus: 400, // Fed by Q3
+      loadBus: 110, // Fed by Q3
     }
   },
   steps: [
@@ -183,7 +190,7 @@ export const PROC_RETURN_FROM_BYPASS: Procedure = {
       id: 3,
       description: 'Start Inverter and Verify Output Voltage.',
       expectedAction: { type: 'SWITCH', target: 'inverter', value: 'START' },
-      validationFn: (s) => s.components.inverter.status === ComponentStatus.NORMAL && s.components.inverter.voltageOut > 380,
+      validationFn: (s) => s.components.inverter.status === ComponentStatus.NORMAL && s.components.inverter.voltageOut > 99,
       hint: 'Manually start the inverter module.'
     },
     {
@@ -257,7 +264,7 @@ export const PROC_BLACK_START: Procedure = {
       id: 2,
       description: 'Pre-charge DC Bus (simulated automatic soft-start). Start Inverter.',
       expectedAction: { type: 'SWITCH', target: 'inverter', value: 'START' },
-      validationFn: (s) => s.components.inverter.status === ComponentStatus.NORMAL && s.components.inverter.voltageOut > 380,
+      validationFn: (s) => s.components.inverter.status === ComponentStatus.NORMAL && s.components.inverter.voltageOut > 99,
       hint: 'Click the Inverter unit to manually start.',
     },
     {
@@ -275,7 +282,7 @@ export const PROC_BLACK_START: Procedure = {
     {
       id: 5,
       description: 'Wait for voltage stability before adding Load 2.',
-      validationFn: (s) => s.voltages.loadBus > 390,
+      validationFn: (s) => s.voltages.loadBus > 99,
     }
   ]
 };
@@ -297,8 +304,8 @@ export const PROC_COLD_START: Procedure = {
       [BreakerId.Load2]: false,
     },
     voltages: {
-      utilityInput: 400,
-      bypassInput: 400,
+      utilityInput: 415,
+      bypassInput: 415,
       dcBus: 0,
       loadBus: 0,
       inverterPhase: 0,
@@ -340,7 +347,7 @@ export const PROC_COLD_START: Procedure = {
     {
       id: 5,
       description: 'Energize Critical Loads.',
-      validationFn: (s) => s.breakers[BreakerId.Load1] && s.breakers[BreakerId.Load2] && s.voltages.loadBus > 390,
+      validationFn: (s) => s.breakers[BreakerId.Load1] && s.breakers[BreakerId.Load2] && s.voltages.loadBus > 99,
     }
   ]
 };
@@ -395,7 +402,7 @@ export const PROC_EMERGENCY: Procedure = {
     {
       id: 5,
       description: 'Verify Critical Load 1 is supported by Bypass.',
-      validationFn: (s) => s.voltages.loadBus > 390 && s.breakers[BreakerId.Load1],
+      validationFn: (s) => s.voltages.loadBus > 99 && s.breakers[BreakerId.Load1],
     }
   ]
 };
@@ -450,7 +457,7 @@ export const PROC_FAILURE_RECOVERY: Procedure = {
     {
       id: 5,
       description: 'Confirm Load supported by Bypass Feed.',
-      validationFn: (s) => s.voltages.loadBus > 390 && s.components.staticSwitch.mode === 'BYPASS',
+      validationFn: (s) => s.voltages.loadBus > 99 && s.components.staticSwitch.mode === 'BYPASS',
     }
   ]
 };

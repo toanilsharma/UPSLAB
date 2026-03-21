@@ -18,13 +18,13 @@ interface QuickReferenceCardProps {
 const IEC_THRESHOLDS = {
     // Input Voltage: 415V ±10% (IEC 62040-3)
     INPUT_VOLTAGE_NOMINAL: 415,
-    INPUT_VOLTAGE_MIN: 374,  // -10%
-    INPUT_VOLTAGE_MAX: 457,  // +10%
+    INPUT_VOLTAGE_MIN: 373,  // -10%
+    INPUT_VOLTAGE_MAX: 456,  // +10%
 
-    // Output Voltage: 415V ±1% (IEC 62040-3 VFI)
-    OUTPUT_VOLTAGE_NOMINAL: 415,
-    OUTPUT_VOLTAGE_MIN: 411,  // -1%
-    OUTPUT_VOLTAGE_MAX: 419,  // +1%
+    // Output Voltage: 110V ±1% (IEC 62040-3 VFI)
+    OUTPUT_VOLTAGE_NOMINAL: 110,
+    OUTPUT_VOLTAGE_MIN: 109,  // -1%
+    OUTPUT_VOLTAGE_MAX: 111,  // +1%
 
     // Frequency: 50Hz ±0.5% (IEC 62040-3 VFI)
     FREQUENCY_NOMINAL: 50.0,
@@ -116,7 +116,7 @@ export const QuickReferenceCard: React.FC<QuickReferenceCardProps> = ({ visible,
                                 </div>
                                 <div className="flex justify-between text-xs text-slate-500">
                                     <span>Nominal</span>
-                                    <span>415V ±10% (374-457V)</span>
+                                    <span>415V ±10% (373-456V)</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-400">Frequency</span>
@@ -164,11 +164,11 @@ export const QuickReferenceCard: React.FC<QuickReferenceCardProps> = ({ visible,
                                 </div>
                                 <div className="flex justify-between text-xs text-slate-500">
                                     <span>Tolerance</span>
-                                    <span>415V ±1% (411-419V)</span>
+                                    <span>110V ±1% (109-111V)</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-slate-400">Inverter Output</span>
-                                    <span className={state.components.inverter.voltageOut > 400 ? 'text-green-400' : 'text-red-400'}>
+                                    <span className={state.components.inverter.voltageOut > 99 ? 'text-green-400' : 'text-red-400'}>
                                         {state.components.inverter.voltageOut.toFixed(0)}V
                                     </span>
                                 </div>

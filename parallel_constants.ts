@@ -25,7 +25,7 @@ const BATTERY_DEFAULTS = {
 
 const MODULE_DEFAULTS = {
     rectifier: { ...COMPONENT_DEFAULTS, voltageOut: 220 },
-    inverter: { ...COMPONENT_DEFAULTS, voltageOut: 415, temperature: 45 },
+    inverter: { ...COMPONENT_DEFAULTS, voltageOut: 110, temperature: 45 },
     staticSwitch: { 
         mode: 'INVERTER' as const, 
         status: 'OK' as const, 
@@ -59,7 +59,7 @@ export const INITIAL_PARALLEL_STATE: ParallelSimulationState = {
     },
     voltages: {
         utilityInput: 415,
-        loadBus: 415,
+        loadBus: 110,
         bypassInput: 415,
         loadPhase: 0,
         bypassPhase: 0,
@@ -166,6 +166,11 @@ export const PROC_SYSTEM_MAINT_BYPASS: ParallelProcedure = {
             id: 9,
             description: 'Open Input Breakers (Q1-1 and Q1-2).',
             validationFn: (s) => !s.breakers[ParallelBreakerId.Q1_1] && !s.breakers[ParallelBreakerId.Q1_2],
+        },
+        {
+            id: 10,
+            description: 'Open Bypass Input Breakers (Q2-1 and Q2-2).',
+            validationFn: (s) => !s.breakers[ParallelBreakerId.Q2_1] && !s.breakers[ParallelBreakerId.Q2_2],
             hint: 'System now completely isolated. Safe for maintenance.',
         }
     ]
@@ -292,7 +297,7 @@ export const PROC_MODULE_1_RESTORE: ParallelProcedure = {
             module1: {
                 ...INITIAL_PARALLEL_STATE.modules.module1,
                 rectifier: { ...COMPONENT_DEFAULTS, status: ComponentStatus.NORMAL, temperature: 45, voltageOut: 220, efficiency: 0.94, pf: 0.98, thd: 3.1, prechargePct: 100, walkInPct: 100 },
-                inverter: { ...COMPONENT_DEFAULTS, status: ComponentStatus.NORMAL, temperature: 52, voltageOut: 415, efficiency: 0.96, pf: 0.9, thd: 1.2, prechargePct: 100, walkInPct: 100 },
+                inverter: { ...COMPONENT_DEFAULTS, status: ComponentStatus.NORMAL, temperature: 52, voltageOut: 110, efficiency: 0.96, pf: 0.9, thd: 1.2, prechargePct: 100, walkInPct: 100 },
                 staticSwitch: { mode: 'INVERTER' as const, status: 'OK' as const, syncError: 0, syncStatus: 'SYNCED' as const, forceBypass: false },
             }
         }
@@ -332,8 +337,8 @@ export const PROC_MODULE_1_RESTORE: ParallelProcedure = {
         },
         {
             id: 6,
-            description: 'Wait for M1 Inverter to reach NORMAL (400V output).',
-            validationFn: (s) => s.modules.module1.inverter.status === ComponentStatus.NORMAL && s.modules.module1.inverter.voltageOut > 390,
+            description: 'Wait for M1 Inverter to reach NORMAL (110V output).',
+            validationFn: (s) => s.modules.module1.inverter.status === ComponentStatus.NORMAL && s.modules.module1.inverter.voltageOut > 99,
         },
         {
             id: 7,

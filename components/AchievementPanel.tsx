@@ -180,25 +180,33 @@ export const AchievementToast: React.FC<AchievementToastProps> = ({ achievement,
                     initial={{ opacity: 0, y: -50, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -50, scale: 0.9 }}
-                    className="fixed top-24 left-1/2 -translate-x-1/2 z-[300]"
+                    className="fixed top-24 left-1/2 -translate-x-1/2 z-[300] cursor-pointer"
+                    onClick={onDismiss}
                 >
-                    <div className="bg-gradient-to-br from-cyan-900 to-purple-900 border-2 border-cyan-400 rounded-xl shadow-2xl shadow-cyan-500/50 p-5 min-w-[350px]">
-                        <div className="flex items-center gap-4">
+                    <div className="bg-gradient-to-br from-cyan-900 to-purple-900 border-2 border-cyan-400 rounded-xl shadow-2xl shadow-cyan-500/50 p-5 min-w-[350px] relative group overflow-hidden">
+                        {/* Hover overlay hint */}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10 backdrop-blur-[2px]">
+                            <span className="text-white font-bold tracking-widest uppercase text-sm flex items-center gap-2 drop-shadow-md">
+                                <span>Dismiss</span>
+                            </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-4 relative z-0">
                             <motion.div
                                 animate={{ rotate: [0, 15, -15, 0], scale: [1, 1.2, 1] }}
                                 transition={{ duration: 0.5, repeat: 2 }}
-                                className="text-5xl"
+                                className="text-5xl drop-shadow-lg"
                             >
                                 {achievement.icon}
                             </motion.div>
                             <div className="flex-1">
-                                <div className="text-xs font-bold text-cyan-400 uppercase tracking-widest mb-1">
+                                <div className="text-xs font-bold text-cyan-400 uppercase tracking-widest mb-1 drop-shadow-sm">
                                     Achievement Unlocked!
                                 </div>
-                                <h3 className="text-xl font-black text-white mb-1">
+                                <h3 className="text-xl font-black text-white mb-1 drop-shadow-sm">
                                     {achievement.name}
                                 </h3>
-                                <p className="text-sm text-cyan-200">
+                                <p className="text-sm text-cyan-200 drop-shadow-sm">
                                     {achievement.description}
                                 </p>
                             </div>

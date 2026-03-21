@@ -94,12 +94,15 @@ const Breaker = ({ id, x, y, isOpen, onClick, label, vertical = false, isEnergiz
     const labelY = vertical ? 0 : -30;
     const labelX = vertical ? 40 : 0;
 
+    const toolTipYRect = y < 80 ? 35 : -65;
+    const toolTipYText = y < 80 ? 49 : -51;
+
     return (
         <g transform={`translate(${x}, ${y})`} className="cursor-pointer group" onClick={onClick}>
             {/* Custom Instant Tooltip */}
             <g className="opacity-0 group-hover:opacity-100 transition-opacity duration-75 pointer-events-none drop-shadow-lg" style={{ zIndex: 50 }}>
-                <rect x={-65} y={-65} width={130} height={20} rx="4" fill="#1e293b" stroke="#e2e8f0" strokeWidth="1" />
-                <text x={0} y={-51} textAnchor="middle" className="fill-white text-[11px] font-bold tracking-wider">CLICK TO OPERATE</text>
+                <rect x={-65} y={toolTipYRect} width={130} height={20} rx="4" fill="#1e293b" stroke="#e2e8f0" strokeWidth="1" />
+                <text x={0} y={toolTipYText} textAnchor="middle" className="fill-white text-[11px] font-bold tracking-wider">CLICK TO OPERATE</text>
             </g>
 
             {/* Hitbox */}
@@ -135,11 +138,10 @@ const LoadBox = ({ x, y, label, isSwitchedOn, isPowered }: any) => {
 
     if (isSwitchedOn) {
         if (isPowered) {
-            // Normal Operation
-            stroke = 'stroke-cyan-400';
-            fill = 'fill-cyan-900/20';
-            text = 'fill-cyan-300';
-            glow = 'filter drop-shadow(0 0 5px rgba(34,211,238,0.3))';
+            stroke = 'stroke-green-500';
+            fill = 'fill-green-900/40';
+            text = 'fill-green-400';
+            glow = 'filter drop-shadow(0 0 8px rgba(34,197,94,0.4))';
         } else {
             // LOAD DROP (Fault)
             stroke = 'stroke-red-500 animate-pulse';
@@ -167,8 +169,8 @@ const LoadBox = ({ x, y, label, isSwitchedOn, isPowered }: any) => {
             )}
 
             {/* Label */}
-            <text x={0} y={15} textAnchor="middle" className={`${text} text-[13px] font-bold tracking-wider`}>{label}</text>
-            <text x={0} y={28} textAnchor="middle" className={`${text} text-[12px] font-mono`}>{isSwitchedOn ? (isPowered ? 'RUNNING' : '!! LOST !!') : 'OFF'}</text>
+            <text x={0} y={50} textAnchor="middle" className={`${text} text-[10px] font-bold tracking-wider break-words`}>{label}</text>
+            <text x={0} y={62} textAnchor="middle" className={`${text} text-[10px] font-mono`}>{isSwitchedOn ? (isPowered ? 'RUNNING' : '!! LOST !!') : 'OFF'}</text>
         </g>
     );
 }
@@ -185,13 +187,14 @@ const PowerLine = ({ d, energized, warning = false, thick = false, currentFlow, 
     const baseOpacity = energized ? 1 : 0.15; // Dim white when off
     
     // Flow Animation Logic
-    const isFlowing = energized && currentFlow !== undefined && currentFlow > 0;
+    const isFlowing = energized && currentFlow !== undefined && Math.abs(currentFlow) > 0;
     const flowColor = warning ? '#fbbf24' : '#ffffff'; // White flow on Green wire looks "fantastic" (bright energy)
     
     // Speed
+    const absFlow = Math.abs(currentFlow || 0);
     let duration = 2; // slow
-    if (currentFlow && currentFlow > 50) duration = 1;
-    if (currentFlow && currentFlow > 100) duration = 0.5;
+    if (absFlow > 50) duration = 1;
+    if (absFlow > 100) duration = 0.5;
 
     return (
         <>
@@ -306,7 +309,7 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
         <div className="w-full h-full bg-slate-950 border border-slate-700 rounded-lg shadow-xl overflow-hidden relative select-none sld-container">
 
             {/* Instructions Overlay */}
-            <div className="absolute bottom-4 left-4 bg-slate-900/90 p-3 rounded border border-slate-700 backdrop-blur pointer-events-none z-10 shadow-lg">
+            <div className="absolute bottom-12 left-4 bg-slate-900/90 p-3 rounded border border-slate-700 backdrop-blur pointer-events-none z-10 shadow-lg">
                 <div className="text-xs text-slate-500 font-bold mb-2 border-b border-slate-700 pb-1">LEGEND</div>
                 <div className="flex items-center gap-2 mb-1">
                     <div className="w-3 h-3 bg-green-500 rounded-sm"></div> <span className="text-[11px] text-slate-300">BREAKER CLOSED</span>
@@ -318,11 +321,7 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
                     <div className="w-8 h-1 bg-green-400"></div> <span className="text-[11px] text-slate-300">ENERGIZED</span>
                 </div>
             </div>
-            <div className="absolute top-8 left-8 flex items-center gap-4 bg-slate-800/80 px-4 py-2 rounded-md border border-slate-600 backdrop-blur-sm pointer-events-none">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-1 bg-amber-500"></div> <span className="text-[13px] font-bold text-slate-200">BYPASS LINE</span>
-                </div>
-            </div>
+
 
             <svg viewBox="0 -10 850 420" className="w-full h-full">
                 <defs>
@@ -334,19 +333,19 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
 
                 {/* --- MAINTENANCE BYPASS ZONE --- */}
                 <rect x="20" y="20" width="790" height="60" fill="none" stroke="#f97316" strokeWidth="2" strokeDasharray="8,4" rx="8" className="opacity-40" />
-                <text x="35" y="45" className="fill-orange-400 text-[14px] font-bold font-mono px-2 tracking-widest uppercase">Maintenance Bypass Interlock Zone</text>
+                <text x="35" y="32" className="fill-orange-400 text-[14px] font-bold font-mono px-2 tracking-widest uppercase">Maintenance Bypass Interlock Zone</text>
 
                 {/* --- POWER LINES --- */}
 
                 {/* Input Feeds */}
                 <PowerLine d="M50,140 L160,140" energized={utilityLive} warning thick currentFlow={inputAmps} />
-                <text x="50" y="125" className="fill-slate-400 text-sm font-bold">MAINS 400V</text>
+                <text x="50" y="125" className="fill-slate-400 text-sm font-bold">UTILITY INPUT 415V</text>
 
                 <PowerLine d="M50,80 L160,80" energized={bypassLive} warning currentFlow={inputAmps} />
                 <text x="50" y="65" className="fill-slate-400 text-sm font-bold">BYPASS</text>
 
                 {/* Rectifier Section */}
-                <PowerLine d="M160,140 L220,140" energized={inputToRect} />
+                <PowerLine d="M160,140 L220,140" energized={inputToRect} currentFlow={inputAmps} />
                 <PowerLine d="M280,140 L350,140" energized={components.rectifier.voltageOut > 50} thick currentFlow={inputAmps} />
 
                 {/* DC Link */}
@@ -357,18 +356,19 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
 
                 {/* Battery */}
                 <Node x={350} y={260} />
-                <PowerLine d="M350,260 L350,330" energized={dcBusLive || state.battery.chargeLevel > 0} currentFlow={battAmps} reverse={isDischarging} />
+                <PowerLine d="M350,260 L350,290" energized={dcBusLive} thick currentFlow={battAmps} reverse={isDischarging} />
+                <PowerLine d="M350,320 L350,330" energized={state.battery.chargeLevel > 0} currentFlow={battAmps} reverse={isDischarging} />
 
                 {/* Inverter Input */}
-                <PowerLine d="M350,140 L400,140" energized={dcBusLive} currentFlow={outputAmps} />
+                <PowerLine d="M350,140 L400,140" energized={dcBusLive} currentFlow={(stsInverter && invActive && !q3Live) ? outputAmps : inputAmps / 4} />
 
                 {/* Inverter Output */}
-                <PowerLine d="M460,140 L520,140" energized={invActive} currentFlow={outputAmps} />
+                <PowerLine d="M460,140 L520,140" energized={invActive} currentFlow={(stsInverter && invActive && !q3Live) ? outputAmps : 0} />
 
                 {/* Bypass Path */}
-                <PowerLine d="M160,80 L520,80" energized={bypassPostQ2} currentFlow={outputAmps} />
-                <PowerLine d="M110,80 L110,40 L350,40" energized={bypassLive} warning thick currentFlow={bypassLive ? 50 : 0} />
-                <PowerLine d="M350,40 L650,40 L650,110" energized={q3Live} warning thick currentFlow={outputAmps} />
+                <PowerLine d="M160,80 L520,80" energized={bypassPostQ2} currentFlow={(!stsInverter && bypassPostQ2 && !q3Live) ? outputAmps : 0} />
+                <PowerLine d="M110,80 L110,40 L350,40" energized={bypassLive} warning thick currentFlow={q3Live ? outputAmps : 0} />
+                <PowerLine d="M350,40 L650,40 L650,110" energized={q3Live} warning thick currentFlow={q3Live ? outputAmps : 0} />
                 <Node x={110} y={80} />
                 <Node x={650} y={110} />
 
@@ -402,20 +402,37 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
                     <StaticSwitchInternal mode={components.staticSwitch.mode} />
                 </ComponentBox>
 
-                {/* Battery Visual */}
+                {/* Battery Visual (IEC Standard) */}
                 <g transform="translate(320, 330)">
+                    {/* Outer Box */}
                     <rect width="60" height="40" className="fill-slate-800 stroke-slate-500 stroke-2" />
-                    <text x="30" y="25" textAnchor="middle" className="fill-slate-300 text-sm font-bold">BATT</text>
-                    <rect x="5" y="32" width={50} height="5" className="fill-slate-700" />
-                    <rect x="5" y="32" width={50 * (state.battery.chargeLevel / 100)} height="5" className={`${state.battery.chargeLevel < 20 ? 'fill-red-500' : 'fill-green-500'} transition-all duration-1000`} />
-                    <text x="30" y="45" textAnchor="middle" className="fill-slate-500 text-[12px]">{state.battery.chargeLevel.toFixed(0)}%</text>
+                    <text x="30" y="25" textAnchor="middle" className="fill-slate-300 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">BATT</text>
+                    
+                    {/* IEC 60617 Battery Symbol Cells */}
+                    <g transform="translate(15, 12)" strokeWidth="2">
+                        {/* Cell 1 */}
+                        <line x1="0" y1="0" x2="0" y2="16" className="stroke-slate-300" />
+                        <line x1="8" y1="4" x2="8" y2="12" className="stroke-slate-300 stroke-[4px]" />
+                        <line x1="8" y1="8" x2="14" y2="8" className="stroke-slate-500 stroke-1" strokeDasharray="2,2" />
+                        {/* Cell 2 */}
+                        <line x1="22" y1="0" x2="22" y2="16" className="stroke-slate-300" />
+                        <line x1="30" y1="4" x2="30" y2="12" className="stroke-slate-300 stroke-[4px]" />
+                        {/* Connections */}
+                        <line x1="-10" y1="8" x2="0" y2="8" className="stroke-slate-500 stroke-1" />
+                        <line x1="30" y1="8" x2="40" y2="8" className="stroke-slate-500 stroke-1" />
+                    </g>
+                    
+                    {/* Percentage Indicator Below Box */}
+                    <rect x="5" y="45" width={50} height="5" className="fill-slate-700" />
+                    <rect x="5" y="45" width={50 * (state.battery.chargeLevel / 100)} height="5" className={`${state.battery.chargeLevel < 20 ? 'fill-red-500' : 'fill-green-500'} transition-all duration-1000`} />
+                    <text x="30" y="62" textAnchor="middle" className="fill-white text-[13px] font-bold">{state.battery.chargeLevel.toFixed(0)}%</text>
                 </g>
 
                 <Transformer x={340} y={80} />
 
                 {/* --- BREAKERS --- */}
-                <Breaker id={BreakerId.Q1} x={160} y={140} label="Q1" isOpen={!breakers[BreakerId.Q1]} isEnergized={inputToRect} onClick={() => onBreakerToggle(BreakerId.Q1)} />
                 <Breaker id={BreakerId.Q2} x={160} y={80} label="Q2" isOpen={!breakers[BreakerId.Q2]} isEnergized={bypassPostQ2} onClick={() => onBreakerToggle(BreakerId.Q2)} />
+                <Breaker id={BreakerId.Q1} x={160} y={140} label="Q1" isOpen={!breakers[BreakerId.Q1]} isEnergized={inputToRect} onClick={() => onBreakerToggle(BreakerId.Q1)} />
 
                 <g>
                     <rect x={320} y={15} width={60} height={50} className="fill-amber-500/10 stroke-none" />

@@ -31,7 +31,7 @@ export class UPSController {
         const voltages = nextState.voltages;
 
         // --- ELECTRICAL STATUS FLAGS ---
-        const MAINS_OK = voltages.utilityInput > 400; // 415V system
+        const MAINS_OK = voltages.utilityInput > 400;
         const BYPASS_OK = voltages.bypassInput > 400 && b.Q2;
         const DC_OK = voltages.dcBus > 155; // 220V DC system
         const BATTERY_SOC = nextState.battery.chargeLevel;

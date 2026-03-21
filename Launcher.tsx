@@ -180,9 +180,9 @@ const Launcher = () => {
                              className="space-y-6"
                         >
                              <div className="flex gap-3 mb-6">
-                                <StatBadge label="Voltage" value="415 VAC" />
+                                <StatBadge label="Input" value="415 VAC" />
+                                <StatBadge label="Output" value="110 VAC" />
                                 <StatBadge label="DC Bus" value="220 V" />
-                                <StatBadge label="Topology" value="Double Conv." />
                             </div>
 
                             <FeatureList 

@@ -105,7 +105,7 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
 
                     // Auto-transfer to inverter when inverter is ready and on bypass
                     if (next.components.inverter.status === ComponentStatus.NORMAL &&
-                        next.components.inverter.voltageOut > 400 &&
+                        next.components.inverter.voltageOut > 99 &&
                         next.components.staticSwitch.mode === 'BYPASS' &&
                         !next.components.staticSwitch.forceBypass) {
                         next.components.staticSwitch.mode = 'INVERTER';
@@ -240,7 +240,7 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
         addLog(`FAULT INJECTION: ${type}`, 'ALARM');
         setState(prev => {
             const next = JSON.parse(JSON.stringify(prev)); // Deep clone
-            if (type === 'UTILITY_LOSS') next.voltages.utilityInput = next.voltages.utilityInput > 0 ? 0 : 400;
+            if (type === 'UTILITY_LOSS') next.voltages.utilityInput = next.voltages.utilityInput > 0 ? 0 : 415;
             if (type === 'RECTIFIER_FAULT') next.components.rectifier.status = ComponentStatus.FAULT;
             if (type === 'INVERTER_FAULT') next.components.inverter.status = ComponentStatus.FAULT;
             if (type === 'BATTERY_DRAIN') next.battery.chargeLevel = 10;
@@ -262,6 +262,7 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
             setMistakes(0);
             setLogs([]);
             setState(INITIAL_STATE);
+            setNewAchievement(null);
             return;
         }
         let proc;
@@ -367,25 +368,25 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
             />
 
             {/* LEFT COLUMN: SIMULATION */}
-            <div className="flex-1 flex flex-col p-0 h-full min-h-0 relative">
+            <div className="flex-1 flex flex-col p-0 h-full min-h-0 min-w-0 relative">
 
                 {/* Top Bar: Header & Gauges - HIDDEN ON MOBILE (Replaced by HUD) */}
                 {!isMobile && (
                     <div className="flex-none flex justify-between items-center bg-slate-900 border-b border-cyan-500/20 shadow-lg z-10 px-4 py-2 h-20">
-                        <div className="flex flex-col justify-center cursor-pointer group mt-2" onClick={onReturnToMenu}>
-                            <h1 className="text-xl font-black italic pl-4 pr-1 text-slate-100 tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-500">UPS</span> <span className="text-sm font-normal text-slate-400">SINGLE</span></h1>
-                            <div className="text-[9px] text-cyan-400/80 font-mono tracking-wider mt-1 pl-4 uppercase">IEC 62040-3 VFI-SS-111 & IEEE 3006.7 Compliant Scheme</div>
-                            <div className="text-[10px] text-slate-400 font-mono tracking-widest mt-1 pl-4 group-hover:text-cyan-500 transition-colors">
-                                {state.upsMode} {/* Display Mode Here */}
+                        <div className="flex flex-col justify-center cursor-pointer group mt-2 shrink-0 min-w-max" onClick={onReturnToMenu}>
+                            <h1 className="text-2xl font-black italic pl-4 pr-1 text-slate-100 tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-500">UPS</span> <span className="text-base font-normal text-slate-400">SINGLE</span></h1>
+                            <div className="text-[11px] text-cyan-400/80 font-mono tracking-wider mt-1 pl-4 uppercase">IEC 62040-3 VFI-SS-111 & IEEE 3006.7 Compliant Scheme</div>
+                            <div className="text-[12px] text-slate-400 font-mono tracking-widest mt-1 pl-4 group-hover:text-cyan-500 transition-colors">
+                                {state.upsMode} / 110V / 50Hz
                                 {onReturnToMenu && ' · CLICK TO EXIT'}
                             </div>
                         </div>
 
-                        <div className="h-full flex-1 mx-4">
+                        <div className="h-full flex-1 mx-4 min-w-0 overflow-x-auto scrollbar-none">
                             <Dashboard state={state} />
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                             <button onClick={() => startProcedure('')} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 border border-green-400 rounded text-xs font-bold text-white transition-colors shadow-md" title="Reset UPS to normal running state">
                                 🔄 <span className="hidden sm:inline">RESET</span>
                             </button>

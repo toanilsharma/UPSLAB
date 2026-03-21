@@ -120,15 +120,15 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
 
         // --- SYSTEM-WIDE EVENTS ---
         // Utility power
-        if (newVolt.utilityInput < 100 && prevVolt.utilityInput >= 350) {
+        if (newVolt.utilityInput < 400 && prevVolt.utilityInput >= 410) {
             addLog('SYSTEM: UTILITY POWER FAILURE - Transferring to battery', 'ALARM');
         }
-        if (newVolt.utilityInput >= 350 && prevVolt.utilityInput < 100) {
+        if (newVolt.utilityInput >= 410 && prevVolt.utilityInput < 400) {
             addLog('SYSTEM: Utility power RESTORED', 'INFO');
         }
 
         // Load bus
-        if (newVolt.loadBus < 100 && prevVolt.loadBus >= 350) {
+        if (newVolt.loadBus < 100 && prevVolt.loadBus >= 99) {
             addLog('CRITICAL: Load bus voltage LOST - Critical load offline!', 'ALARM');
         }
         if (newVolt.loadBus >= 350 && prevVolt.loadBus < 100) {
@@ -207,7 +207,7 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                         addLog('AUTO M1: Inverter Starting', 'INFO');
                     }
                     if (newState.modules.module1.inverter.status === ComponentStatus.NORMAL &&
-                        newState.modules.module1.inverter.voltageOut > 400 &&
+                        newState.modules.module1.inverter.voltageOut > 99 &&
                         newState.modules.module1.staticSwitch.mode === 'BYPASS' &&
                         !newState.modules.module1.staticSwitch.forceBypass) {
 
@@ -244,7 +244,7 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                         addLog('AUTO M2: Inverter Starting', 'INFO');
                     }
                     if (newState.modules.module2.inverter.status === ComponentStatus.NORMAL &&
-                        newState.modules.module2.inverter.voltageOut > 400 &&
+                        newState.modules.module2.inverter.voltageOut > 99 &&
                         newState.modules.module2.staticSwitch.mode === 'BYPASS' &&
                         !newState.modules.module2.staticSwitch.forceBypass) {
 
@@ -415,20 +415,20 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                     {notification.msg}
                 </div>
             )}
-            <div className="flex-1 flex flex-col p-0 h-full min-h-0 relative">
+            <div className="flex-1 flex flex-col p-0 h-full min-h-0 min-w-0 relative">
                 {/* TOP BAR - HIDDEN ON MOBILE */}
                 {!isMobile && (
-                    <div className="flex-none flex justify-between items-center bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b-2 border-cyan-500/30 shadow-lg z-10 px-4 py-2 h-20 relative overflow-hidden">
+                    <div className="flex-none flex justify-between items-center bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b-2 border-cyan-500/30 shadow-lg z-10 px-4 py-2 h-20 relative">
                         {/* Subtle animated glow effect */}
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/5 to-transparent opacity-50"></div>
-                        <div className="flex flex-col justify-center cursor-pointer group relative z-10 flex-shrink-0 mt-2" onClick={onReturnToMenu}>
-                            <h1 className="text-xl font-black italic pl-4 pr-1 text-white tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-400">UPS</span> <span className="text-sm font-normal text-slate-400">PARALLEL</span></h1>
-                            <div className="text-[9px] text-cyan-400/80 font-mono tracking-wider mt-1 pl-4 uppercase">IEC 62040-3 VFI-SS-111 & IEEE 3006.7 Compliant Scheme</div>
-                            <div className={`text-[10px] pl-4 font-mono tracking-wide mt-1 ${state.systemMode === ParallelSystemMode.ONLINE_PARALLEL ? 'text-green-400' : state.systemMode === ParallelSystemMode.BATTERY_PARALLEL ? 'text-orange-400 animate-pulse' : state.systemMode === ParallelSystemMode.DEGRADED_REDUNDANCY ? 'text-yellow-400' : state.systemMode === ParallelSystemMode.EMERGENCY_SHUTDOWN ? 'text-red-500 animate-pulse' : 'text-cyan-300/70'}`}>
+                        <div className="flex flex-col justify-center cursor-pointer group relative z-10 flex-shrink-0 min-w-max mt-2" onClick={onReturnToMenu}>
+                            <h1 className="text-2xl font-black italic pl-4 pr-1 text-white tracking-tighter leading-none group-hover:text-cyan-400 transition-colors">SafeOps <span className="text-cyan-400">UPS</span> <span className="text-base font-normal text-slate-400">PARALLEL</span></h1>
+                            <div className="text-[11px] text-cyan-400/80 font-mono tracking-wider mt-1 pl-4 uppercase">IEC 62040-3 VFI-SS-111 & IEEE 3006.7 Compliant Scheme</div>
+                            <div className={`text-[12px] pl-4 font-mono tracking-wide mt-1 ${state.systemMode === ParallelSystemMode.ONLINE_PARALLEL ? 'text-green-400' : state.systemMode === ParallelSystemMode.BATTERY_PARALLEL ? 'text-orange-400 animate-pulse' : state.systemMode === ParallelSystemMode.DEGRADED_REDUNDANCY ? 'text-yellow-400' : state.systemMode === ParallelSystemMode.EMERGENCY_SHUTDOWN ? 'text-red-500 animate-pulse' : 'text-cyan-300/70'}`}>
                                 {state.systemMode.replace(/_/g, ' ')} {state.redundancyOK ? '✓' : '⚠'}
                             </div>
                         </div>
-                        <div className="h-full flex-1 mx-4">
+                        <div className="h-full flex-1 mx-4 min-w-0 overflow-x-auto scrollbar-none">
                             <ParallelDashboard state={state} />
                         </div>
                         <div className="flex items-center gap-2 relative z-10 flex-shrink-0">

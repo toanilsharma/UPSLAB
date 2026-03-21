@@ -98,7 +98,7 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     const b = s.breakers;
 
     // --- 1. INPUT STAGE ---
-    const utilityLive = s.voltages.utilityInput > 400; // 415V nominal, 400V undervoltage threshold
+    const utilityLive = s.voltages.utilityInput > 400; // 400V system
 
     // Rectifier Physics: "Walk-in" (Soft Start) Logic
     // First check for terminal states (FAULT or OFF)
@@ -245,19 +245,19 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
 
             s.components.inverter.startTimer = Math.max(0, s.components.inverter.startTimer - 0.2);
 
-            // Voltage builds linearly from 0 to 415 over the 10 seconds
+            // Voltage builds linearly from 0 to 110 over the 10 seconds
             const progress = (10.0 - s.components.inverter.startTimer) / 10.0;
-            s.components.inverter.voltageOut = 415 * progress;
+            s.components.inverter.voltageOut = 110 * progress;
             s.frequencies.inverter = 45 + (5 * progress); // Freq climbs to 50
 
             if (s.components.inverter.startTimer <= 0) {
                 s.components.inverter.status = ComponentStatus.NORMAL;
-                s.components.inverter.voltageOut = 415;
+                s.components.inverter.voltageOut = 110;
                 s.components.inverter.startTimer = 0;
                 s.frequencies.inverter = 50.0;
             }
         } else {
-            s.components.inverter.voltageOut = 415 + (Math.sin(now / 1000) * 0.2);
+            s.components.inverter.voltageOut = 110 + (Math.sin(now / 1000) * 0.2);
             s.components.inverter.startTimer = 0;
             // Frequency drifts slightly if on Battery, locked if on Mains (PLL simulation)
             if (dcSource === 'BATTERY') {
@@ -290,7 +290,7 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
     const isLoadNonLinear = s.breakers[BreakerId.Load1]; // Assume Load 1 (Server Rack) is non-linear
     s.components.inverter.thd = calculateTHD(s.components.inverter.loadPct, isLoadNonLinear);
     s.components.inverter.pf = 0.85 + (s.components.inverter.loadPct / 100) * 0.1; 
-    s.components.inverter.kva = (s.components.inverter.loadPct * 120 * 415 / 1000) / s.components.inverter.pf;
+    s.components.inverter.kva = (s.components.inverter.loadPct * 120 * 110 / 1000) / s.components.inverter.pf;
 
     // --- THERMAL FOLD-BACK (DERATING) ---
     // If Inverter temp > 90°C, start limiting max output power to protect electronics
@@ -305,7 +305,7 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
 
     // --- 4. STATIC SWITCH (STS) ---
     // --- 4. STATIC SWITCH (STS) & PLL SYNC ---
-    const bypassAvailable = s.voltages.bypassInput > 400; // 415V system
+    const bypassAvailable = s.voltages.bypassInput > 400; // 400V system
     const q2Closed = b[BreakerId.Q2];
     
     // Update Phase Angles (0-360 degrees)
@@ -337,7 +337,7 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
 
     s.components.staticSwitch.syncError = syncError;
 
-    const inverterReady = s.components.inverter.status === ComponentStatus.NORMAL && s.components.inverter.voltageOut > 400;
+    const inverterReady = s.components.inverter.status === ComponentStatus.NORMAL && s.components.inverter.voltageOut > 99;
 
     // AUTO-TRANSFER LOGIC
     if (s.components.staticSwitch.mode === 'INVERTER') {

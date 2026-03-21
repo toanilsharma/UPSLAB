@@ -9,10 +9,10 @@ const MetricCard = ({ label, value, icon, subValue, color = "text-cyan-400" }: a
     <div className="flex flex-col bg-slate-950/50 border border-slate-800 rounded px-3 py-1 min-w-[120px]">
         <div className="flex items-center gap-2 mb-1">
             <span className="text-slate-500">{icon}</span>
-            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{label}</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{label}</span>
         </div>
         <div className={`text-sm font-mono font-black ${color}`}>{value}</div>
-        <div className="text-[9px] text-slate-600 font-medium">{subValue}</div>
+        <div className="text-[10px] text-slate-600 font-medium">{subValue}</div>
     </div>
 );
 
@@ -35,13 +35,13 @@ const DigitalMeter = ({ label, value, unit, min, max, alertLow, alertHigh, small
 
     return (
         <div className={`flex flex-col bg-slate-950 border ${borderColor} ${bgGlow} rounded p-2 ${small ? 'min-w-[80px]' : 'min-w-[100px]'} relative overflow-hidden transition-all duration-300`}>
-            <div className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-1 truncate">{label}</div>
+            <div className="text-[11px] text-slate-400 font-bold tracking-widest uppercase mb-1 truncate">{label}</div>
 
             <div className="flex items-baseline gap-1 z-10">
                 <span className={`${small ? 'text-lg' : 'text-2xl'} font-mono font-black ${statusColor} leading-none`}>
                     {value.toFixed(0)}
                 </span>
-                <span className="text-[10px] text-slate-500 font-bold">{unit}</span>
+                <span className="text-[11px] text-slate-500 font-bold">{unit}</span>
             </div>
 
             {/* Progress Bar Background */}
@@ -61,7 +61,7 @@ const ModuleStatus = ({ id, rectifier, inverter }: { id: string, rectifier: stri
     const isReady = rectifier === 'NORMAL' && inverter === 'NORMAL';
     return (
         <div className={`flex flex-col items-center justify-center p-2 rounded border ${isReady ? 'bg-green-900/10 border-green-500/30' : 'bg-slate-800 border-slate-700'}`}>
-            <div className="text-[9px] font-bold text-slate-400 mb-1">{id}</div>
+            <div className="text-[10px] font-bold text-slate-400 mb-1">{id}</div>
             <div className="flex gap-1">
                 <div className={`w-2 h-2 rounded-full ${rectifier === 'NORMAL' ? 'bg-green-500 shadow-[0_0_5px_lime]' : 'bg-slate-600'}`} title="Rectifier"></div>
                 <div className={`w-2 h-2 rounded-full ${inverter === 'NORMAL' ? 'bg-green-500 shadow-[0_0_5px_lime]' : 'bg-slate-600'}`} title="Inverter"></div>
@@ -114,8 +114,8 @@ export const ParallelDashboard = ({ state }: { state: ParallelSimulationState })
                 label="Bus"
                 value={state.voltages.loadBus}
                 unit="V"
-                min={0} max={500}
-                alertLow={380} alertHigh={440}
+                min={0} max={150}
+                alertLow={99} alertHigh={121}
             />
 
             <div className="h-10 w-px bg-slate-700 mx-1"></div>
@@ -126,7 +126,7 @@ export const ParallelDashboard = ({ state }: { state: ParallelSimulationState })
                  
                  {/* Share Bar */}
                 <div className="flex flex-col justify-center w-24">
-                    <div className="flex justify-between text-[8px] font-mono text-slate-400 mb-1">
+                    <div className="flex justify-between text-[9px] font-mono text-slate-400 mb-1">
                         <span>{share1.toFixed(0)}%</span>
                         <span>LOAD SHARE</span>
                         <span>{(100-share1).toFixed(0)}%</span>
@@ -153,9 +153,9 @@ export const ParallelDashboard = ({ state }: { state: ParallelSimulationState })
 
              {/* System Status Text */}
              <div className="flex flex-col justify-center min-w-[140px]">
-                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">System Logic</div>
+                <div className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">System Logic</div>
                 <div className={`text-xs font-black tracking-tighter uppercase ${sysColor} truncate`}>{sysStatus}</div>
-                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                <div className="text-[11px] text-slate-400 font-mono mt-0.5">
                     REDUNDANCY: <span className={state.redundancyOK ? "text-green-400" : "text-red-400"}>{state.redundancyOK ? 'N+1 OK' : 'LOST'}</span>
                 </div>
             </div>

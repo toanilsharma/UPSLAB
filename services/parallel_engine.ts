@@ -157,15 +157,15 @@ function processModule(
             module.inverter.startTimer = Math.max(0, module.inverter.startTimer - 0.2);
             
             const progress = (10.0 - module.inverter.startTimer) / 10.0;
-            module.inverter.voltageOut = 415 * progress;
+            module.inverter.voltageOut = 110 * progress;
 
             if (module.inverter.startTimer <= 0) {
                 module.inverter.status = ComponentStatus.NORMAL;
-                module.inverter.voltageOut = 415;
+                module.inverter.voltageOut = 110;
                 module.inverter.startTimer = 0;
             }
         } else {
-            module.inverter.voltageOut = 415 + (Math.sin(now / 1000) * 0.2);
+            module.inverter.voltageOut = 110 + (Math.sin(now / 1000) * 0.2);
             module.inverter.startTimer = 0;
         }
     } else {
@@ -177,7 +177,7 @@ function processModule(
     // Inverter harmonics and PF
     module.inverter.thd = calculateTHD(module.inverter.loadPct, isLoadNonLinear);
     module.inverter.pf = 0.88 + (module.inverter.loadPct / 100) * 0.1;
-    module.inverter.kva = (module.inverter.loadPct * 120 * 415 / 1000) / module.inverter.pf;
+    module.inverter.kva = (module.inverter.loadPct * 120 * 110 / 1000) / module.inverter.pf;
 
     return module;
 }
@@ -206,7 +206,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
     s.alarms = [];
 
     const utilityInput = s.voltages.utilityInput;
-    const utilityLive = utilityInput > 400; // 415V system
+    const utilityLive = utilityInput > 400; // 400V system
 
     // --- CONTINUOUS SAFETY PROTECTION (Section 5.4) ---
     // Rule: Never allow mixed INVERTER and BYPASS sources on the common load bus.
@@ -224,7 +224,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
     // Scenario 1: M1 is Inverter, M2 stuck on Bypass
     if (m1InvConnected && m2BypassConnected) {
         // Attempt to transfer M2 to Inverter
-        if (s.modules.module2.inverter.status === ComponentStatus.NORMAL && s.modules.module2.inverter.voltageOut > 400) {
+        if (s.modules.module2.inverter.status === ComponentStatus.NORMAL && s.modules.module2.inverter.voltageOut > 99) {
             s.modules.module2.staticSwitch.mode = 'INVERTER';
             if (!s.alarms.includes('AUTO-SYNC: M2 TRANSFERRED TO INVERTER')) s.alarms.push('AUTO-SYNC: M2 TRANSFERRED TO INVERTER');
         } else {
@@ -237,7 +237,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
     // Scenario 2: M2 is Inverter, M1 stuck on Bypass
     if (m2InvConnected && m1BypassConnected) {
         // Attempt to transfer M1 to Inverter
-        if (s.modules.module1.inverter.status === ComponentStatus.NORMAL && s.modules.module1.inverter.voltageOut > 400) {
+        if (s.modules.module1.inverter.status === ComponentStatus.NORMAL && s.modules.module1.inverter.voltageOut > 99) {
             s.modules.module1.staticSwitch.mode = 'INVERTER';
             if (!s.alarms.includes('AUTO-SYNC: M1 TRANSFERRED TO INVERTER')) s.alarms.push('AUTO-SYNC: M1 TRANSFERRED TO INVERTER');
         } else {
@@ -255,7 +255,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
     s.loadKW = totalLoadkW; // Update system load KW
 
     // Correct 3-phase current formula: I = P / (sqrt(3) * V * PF)
-    const totalLoadAmps = (totalLoadkW * 1000) / (1.732 * 415 * 0.9);
+    const totalLoadAmps = (totalLoadkW * 1000) / (1.732 * 110 * 0.9);
 
     // --- PHASE & SYNC PHYSICS (Phase 3) ---
     const dt = 0.2; // 200ms
@@ -325,7 +325,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
 
     // --- STATIC SWITCH LOGIC FOR EACH MODULE ---
     const processStaticSwitch = (module: UPSModuleState, bypassAvailable: boolean) => {
-        const inverterReady = module.inverter.status === ComponentStatus.NORMAL && module.inverter.voltageOut > 400;
+        const inverterReady = module.inverter.status === ComponentStatus.NORMAL && module.inverter.voltageOut > 99;
 
         // Calculate sync error
         const freqDiff = Math.abs(50.0 - s.frequencies.utility);
@@ -386,7 +386,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
         const activeCount = sources.length;
 
         if (activeCount > 0) {
-            s.voltages.loadBus = 415;
+            s.voltages.loadBus = 110;
 
             // AUTOMATIC LOAD BALANCING WITH REDUNDANCY
             const ampsPerModule = totalLoadAmps / activeCount;
@@ -403,7 +403,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
 
                 // Battery discharge if on battery
                 if (s.modules.module1.dcBusVoltage < 500 && s.modules.module1.battery.chargeLevel > 0) {
-                    const powerRequired = (ampsPerModule * 400) / s.modules.module1.inverter.efficiency;
+                    const powerRequired = (ampsPerModule * 110) / s.modules.module1.inverter.efficiency;
                     const dcAmps = powerRequired / s.modules.module1.dcBusVoltage;
                     s.modules.module1.battery.current = -dcAmps;
                     // Adjusted for >30min runtime: Slow down discharge rate significantly
@@ -433,7 +433,7 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
 
                 // Battery discharge if on battery
                 if (s.modules.module2.dcBusVoltage < 500 && s.modules.module2.battery.chargeLevel > 0) {
-                    const powerRequired = (ampsPerModule * 400) / s.modules.module2.inverter.efficiency;
+                    const powerRequired = (ampsPerModule * 110) / s.modules.module2.inverter.efficiency;
                     const dcAmps = powerRequired / s.modules.module2.dcBusVoltage;
                     s.modules.module2.battery.current = -dcAmps;
                     // Adjusted for >30min runtime

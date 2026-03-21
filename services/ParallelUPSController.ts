@@ -290,7 +290,7 @@ export class ParallelUPSController {
                     };
                 }
 
-                if (module.inverter.status === ComponentStatus.NORMAL && module.inverter.voltageOut > 400) {
+                if (module.inverter.status === ComponentStatus.NORMAL && module.inverter.voltageOut > 99) {
                     module.staticSwitch.mode = 'INVERTER';
                     module.staticSwitch.forceBypass = false;
                     log = `Operator transferred ${modName} STS to INVERTER`;
