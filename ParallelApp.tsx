@@ -202,7 +202,8 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                         addLog('AUTO M1: Rectifier Starting', 'INFO');
                     }
                     if (dc1OK && newState.modules.module1.rectifier.status === ComponentStatus.NORMAL &&
-                        newState.modules.module1.inverter.status === ComponentStatus.OFF) {
+                        newState.modules.module1.inverter.status === ComponentStatus.OFF && 
+                        !activeProcedure) {
                         newState.modules.module1.inverter.status = ComponentStatus.STARTING;
                         addLog('AUTO M1: Inverter Starting', 'INFO');
                     }
@@ -239,7 +240,8 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                         addLog('AUTO M2: Rectifier Starting', 'INFO');
                     }
                     if (dc2OK && newState.modules.module2.rectifier.status === ComponentStatus.NORMAL &&
-                        newState.modules.module2.inverter.status === ComponentStatus.OFF) {
+                        newState.modules.module2.inverter.status === ComponentStatus.OFF && 
+                        !activeProcedure) {
                         newState.modules.module2.inverter.status = ComponentStatus.STARTING;
                         addLog('AUTO M2: Inverter Starting', 'INFO');
                     }
@@ -271,7 +273,7 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
             });
         }, 200);
         return () => clearInterval(interval);
-    }, [failReason, booted, monitorEvents, autoMode]);
+    }, [failReason, booted, monitorEvents, autoMode, activeProcedure]);
 
     const toggleBreaker = useCallback((id: string) => {
         if (failReason) return;
@@ -335,6 +337,8 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                 }
 
                 addLog(result.log, 'ACTION');
+                setNotification({ msg: `Transfer Successful: ${result.log.split('->').pop() || 'Completed'}`, type: 'info' });
+                setTimeout(() => setNotification(null), 3000);
                 return calculateParallelPowerFlow(result.newState);
             }
             return calculateParallelPowerFlow(next);

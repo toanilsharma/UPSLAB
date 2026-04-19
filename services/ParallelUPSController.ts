@@ -61,17 +61,8 @@ export class ParallelUPSController {
             }
         }
 
-        // INTERLOCK 7: Block closing Q1_x while Q3_x closed
-        if (isClosing && breakerId === ParallelBreakerId.Q1_1) {
-            if (state.breakers[ParallelBreakerId.Q3_1]) {
-                return { allowed: false, reason: 'INTERLOCK: Cannot close Q1-1 while Q3-1 (Maint Bypass) is closed' };
-            }
-        }
-        if (isClosing && breakerId === ParallelBreakerId.Q1_2) {
-            if (state.breakers[ParallelBreakerId.Q3_2]) {
-                return { allowed: false, reason: 'INTERLOCK: Cannot close Q1-2 while Q3-2 (Maint Bypass) is closed' };
-            }
-        }
+        // INTERLOCK 7: Removed Q1/Q3 interlock to allow Return from Maintenance Bypass
+        // Q1 must be able to close while Q3 is closed to power up the UPS before transfer.
 
         // INTERLOCK 2: Block Q4_x opening if it drops available modules below required
         if (!isClosing && (breakerId === ParallelBreakerId.Q4_1 || breakerId === ParallelBreakerId.Q4_2)) {
@@ -280,28 +271,41 @@ export class ParallelUPSController {
 
         if (comp === 'staticSwitch') {
             if (command.action === 'TO_INVERTER') {
-                // SAFETY: Prevent Short Circuit if other module is on BYPASS
-                const otherOnBypass = otherModule.staticSwitch.mode === 'BYPASS' && otherBreakerQ4;
-
-                if (otherOnBypass) {
-                    return {
-                        newState: prevState,
-                        log: `ERROR: Cannot transfer ${modName} to Inverter! Short Circuit risk (Other module on Bypass)`
-                    };
+                if (module.inverter.status !== ComponentStatus.NORMAL || module.inverter.voltageOut <= 99) {
+                    return { newState: prevState, log: `ERROR: ${modName} Inverter not ready` };
                 }
 
-                if (module.inverter.status === ComponentStatus.NORMAL && module.inverter.voltageOut > 99) {
+                if (myBreakerQ4 && otherBreakerQ4) {
+                    // Symmetrical parallel transfer requires peer to be ready
+                    if (otherModule.inverter.status !== ComponentStatus.NORMAL || otherModule.inverter.voltageOut <= 99) {
+                        return { newState: prevState, log: `ERROR: Cannot return System to INVERTER. Peer module Inverter not ready.` };
+                    }
                     module.staticSwitch.mode = 'INVERTER';
                     module.staticSwitch.forceBypass = false;
-                    log = `Operator transferred ${modName} STS to INVERTER`;
+                    otherModule.staticSwitch.mode = 'INVERTER';
+                    otherModule.staticSwitch.forceBypass = false;
+                    log = `SYSTEM: Both modules transferred to INVERTER symmetrically`;
                 } else {
-                    return { newState: prevState, log: `ERROR: ${modName} Inverter not ready` };
+                    // Isolated mode transfer
+                    module.staticSwitch.mode = 'INVERTER';
+                    module.staticSwitch.forceBypass = false;
+                    log = `Operator transferred ${modName} STS to INVERTER (Isolated)`;
                 }
             }
             if (command.action === 'TO_BYPASS') {
-                module.staticSwitch.mode = 'BYPASS';
-                module.staticSwitch.forceBypass = true;
-                log = `Operator transferred ${modName} STS to BYPASS`;
+                if (myBreakerQ4 && otherBreakerQ4) {
+                    // Symmetrical parallel transfer
+                    module.staticSwitch.mode = 'BYPASS';
+                    module.staticSwitch.forceBypass = true;
+                    otherModule.staticSwitch.mode = 'BYPASS';
+                    otherModule.staticSwitch.forceBypass = true;
+                    log = `SYSTEM: Both modules transferred to BYPASS symmetrically`;
+                } else {
+                    // Isolated mode transfer
+                    module.staticSwitch.mode = 'BYPASS';
+                    module.staticSwitch.forceBypass = true;
+                    log = `Operator transferred ${modName} STS to BYPASS (Isolated)`;
+                }
             }
         }
 

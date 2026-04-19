@@ -225,27 +225,41 @@ export const calculateParallelPowerFlow = (prevState: ParallelSimulationState): 
 
     // Scenario 1: M1 is Inverter, M2 stuck on Bypass
     if (m1InvConnected && m2BypassConnected) {
-        // Attempt to transfer M2 to Inverter
-        if (s.modules.module2.inverter.status === ComponentStatus.NORMAL && s.modules.module2.inverter.voltageOut > 99) {
-            s.modules.module2.staticSwitch.mode = 'INVERTER';
-            if (!s.alarms.includes('AUTO-SYNC: M2 TRANSFERRED TO INVERTER')) s.alarms.push('AUTO-SYNC: M2 TRANSFERRED TO INVERTER');
+        if (s.modules.module2.staticSwitch.forceBypass) {
+            // M2 intentionally forced to bypass, M1 must follow
+            s.modules.module1.staticSwitch.mode = 'BYPASS';
+            s.modules.module1.staticSwitch.forceBypass = true;
+            if (!s.alarms.includes('SYNC: M1 FOLLOWED M2 TO BYPASS')) s.alarms.push('SYNC: M1 FOLLOWED M2 TO BYPASS');
         } else {
-            // If M2 cannot go to Inverter, MUST ISOLATE IT
-            s.breakers[ParallelBreakerId.Q4_2] = false;
-            if (!s.alarms.includes('SAFETY ISOLATION: M2 Q4 OPENED')) s.alarms.push('SAFETY ISOLATION: M2 Q4 OPENED to prevent short circuit');
+            // Attempt to transfer M2 to Inverter
+            if (s.modules.module2.inverter.status === ComponentStatus.NORMAL && s.modules.module2.inverter.voltageOut > 99) {
+                s.modules.module2.staticSwitch.mode = 'INVERTER';
+                if (!s.alarms.includes('AUTO-SYNC: M2 TRANSFERRED TO INVERTER')) s.alarms.push('AUTO-SYNC: M2 TRANSFERRED TO INVERTER');
+            } else {
+                // If M2 cannot go to Inverter, MUST ISOLATE IT
+                s.breakers[ParallelBreakerId.Q4_2] = false;
+                if (!s.alarms.includes('SAFETY ISOLATION: M2 Q4 OPENED')) s.alarms.push('SAFETY ISOLATION: M2 Q4 OPENED to prevent short circuit');
+            }
         }
     }
 
     // Scenario 2: M2 is Inverter, M1 stuck on Bypass
     if (m2InvConnected && m1BypassConnected) {
-        // Attempt to transfer M1 to Inverter
-        if (s.modules.module1.inverter.status === ComponentStatus.NORMAL && s.modules.module1.inverter.voltageOut > 99) {
-            s.modules.module1.staticSwitch.mode = 'INVERTER';
-            if (!s.alarms.includes('AUTO-SYNC: M1 TRANSFERRED TO INVERTER')) s.alarms.push('AUTO-SYNC: M1 TRANSFERRED TO INVERTER');
+        if (s.modules.module1.staticSwitch.forceBypass) {
+            // M1 intentionally forced to bypass, M2 must follow
+            s.modules.module2.staticSwitch.mode = 'BYPASS';
+            s.modules.module2.staticSwitch.forceBypass = true;
+            if (!s.alarms.includes('SYNC: M2 FOLLOWED M1 TO BYPASS')) s.alarms.push('SYNC: M2 FOLLOWED M1 TO BYPASS');
         } else {
-            // If M1 cannot go to Inverter, MUST ISOLATE IT
-            s.breakers[ParallelBreakerId.Q4_1] = false;
-            if (!s.alarms.includes('SAFETY ISOLATION: M1 Q4 OPENED')) s.alarms.push('SAFETY ISOLATION: M1 Q4 OPENED to prevent short circuit');
+            // Attempt to transfer M1 to Inverter
+            if (s.modules.module1.inverter.status === ComponentStatus.NORMAL && s.modules.module1.inverter.voltageOut > 99) {
+                s.modules.module1.staticSwitch.mode = 'INVERTER';
+                if (!s.alarms.includes('AUTO-SYNC: M1 TRANSFERRED TO INVERTER')) s.alarms.push('AUTO-SYNC: M1 TRANSFERRED TO INVERTER');
+            } else {
+                // If M1 cannot go to Inverter, MUST ISOLATE IT
+                s.breakers[ParallelBreakerId.Q4_1] = false;
+                if (!s.alarms.includes('SAFETY ISOLATION: M1 Q4 OPENED')) s.alarms.push('SAFETY ISOLATION: M1 Q4 OPENED to prevent short circuit');
+            }
         }
     }
     // ------------------------------------------------

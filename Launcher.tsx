@@ -134,6 +134,21 @@ const Launcher = () => {
                 </div>
             </header>
 
+            {/* OPTIMAL EXPERIENCE BANNER (Visible primarily on smaller screens) */}
+            <div className="absolute top-24 left-0 right-0 z-40 px-6 flex justify-center text-center pointer-events-none md:hidden">
+                <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5, duration: 0.6 }}
+                    className="bg-amber-950/80 border border-amber-500/50 text-amber-200 px-5 py-3 rounded-xl text-xs md:text-sm shadow-[0_0_25px_rgba(245,158,11,0.2)] max-w-md backdrop-blur-xl pointer-events-auto"
+                >
+                    <div className="font-black tracking-widest uppercase mb-1 text-amber-400">⚠️ Engineering Precision Required</div>
+                    <div className="text-amber-100/80 leading-relaxed">
+                        This high-fidelity Digital Twin features intricate technical controls and dynamic Single Line Diagrams. For the optimal interactive experience, we highly recommend launching this platform on a <b>Laptop or Desktop workstation</b>.
+                    </div>
+                </motion.div>
+            </div>
+
             {/* MAIN CONTENT - SPLIT SCREEN */}
             <main className="flex-1 flex flex-col md:flex-row relative z-10 pt-20">
                 

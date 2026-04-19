@@ -316,6 +316,7 @@ export const PROC_COLD_START: Procedure = {
       inverter: { ...INITIAL_STATE.components.inverter, status: ComponentStatus.OFF, voltageOut: 0 },
       staticSwitch: { ...INITIAL_STATE.components.staticSwitch, mode: 'BYPASS', syncStatus: 'SYNCED' },
     },
+    upsMode: UPSMode.OFF,
     alarms: ['SYSTEM SHUTDOWN'],
   },
   steps: [
@@ -323,7 +324,7 @@ export const PROC_COLD_START: Procedure = {
       id: 1,
       description: 'Close Rectifier Input Breaker (Q1) to charge DC Bus.',
       expectedAction: { type: 'BREAKER', target: BreakerId.Q1, value: true },
-      validationFn: (s) => s.breakers[BreakerId.Q1] && s.voltages.dcBus > 500,
+      validationFn: (s) => s.breakers[BreakerId.Q1] && s.voltages.dcBus > 200,
       hint: 'Close Q1, then open Rectifier Faceplate and click START.',
     },
     {

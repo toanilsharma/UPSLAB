@@ -269,10 +269,9 @@ export class UPSController {
             }
         }
 
-        // Block Closing Q1 into maintenance mode
-        if (breaker === BreakerId.Q1 && !isOpenOperation) {
-            if (b.Q3) return { allowed: false, reason: 'Interlock: Cannot close Q1 while Q3 is closed.' };
-        }
+        // Removed Q1/Q3 interlock to allow Return from Maintenance Bypass
+        // Q1 must be able to close while Q3 is closed to power up the UPS before transfer.
+
 
         return { allowed: true };
     }
@@ -369,7 +368,7 @@ export class UPSController {
             case UPSCommand.ACK_ALARM:
                 logMsg = 'COMMAND: Alarms Acknowledged';
                 break;
-            
+
             case UPSCommand.RECT_BOOST:
                 if (next.components.rectifier.status === ComponentStatus.NORMAL) {
                     next.components.rectifier.boostCharge = true;
@@ -378,7 +377,7 @@ export class UPSController {
                     logMsg = 'ERROR: Cannot Enable Boost (Rectifier not Normal)';
                 }
                 break;
-            
+
             case UPSCommand.RECT_BOOST_OFF:
                 next.components.rectifier.boostCharge = false;
                 logMsg = 'COMMAND: Rectifier Boost Charge Disabled';

@@ -97,8 +97,10 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
                     }
 
                     // Auto-start inverter when DC bus is stable and rectifier is normal
+                    // (Disabled during procedures so user can manually start it as per SOP)
                     if (dcOK && next.components.rectifier.status === ComponentStatus.NORMAL &&
-                        next.components.inverter.status === ComponentStatus.OFF) {
+                        next.components.inverter.status === ComponentStatus.OFF && 
+                        !activeProcedure) {
                         next.components.inverter.status = ComponentStatus.STARTING;
                         addLog('AUTO: Inverter Starting (DC Stable)', 'INFO');
                     }
@@ -134,7 +136,7 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
             });
         }, 200); // Faster physics tick for smooth ramp-up
         return () => clearInterval(interval);
-    }, [failReason, booted]);
+    }, [failReason, booted, autoMode, activeProcedure]);
 
     // Handle Breaker Toggle
     const toggleBreaker = useCallback((id: BreakerId) => {
@@ -219,6 +221,8 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
                     next.components.staticSwitch.mode = 'BYPASS';
                     next.components.staticSwitch.forceBypass = true;
                     addLog('Operator Forced STS to BYPASS', 'ACTION');
+                    setNotification({ msg: 'Transfer Successful: Now on Bypass', type: 'info' });
+                    setTimeout(() => setNotification(null), 3000);
                 }
                 if (action === 'TO_INVERTER') {
                     // Try return
@@ -226,9 +230,12 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
                         next.components.staticSwitch.mode = 'INVERTER';
                         next.components.staticSwitch.forceBypass = false;
                         addLog('Operator Requested STS to INVERTER', 'ACTION');
+                        setNotification({ msg: 'Transfer Successful: Now on Inverter', type: 'info' });
+                        setTimeout(() => setNotification(null), 3000);
                     } else {
                         audioService.play('error');
                         setNotification({ msg: 'Transfer Failed: Inverter Not Ready', type: 'error' });
+                        setTimeout(() => setNotification(null), 3000);
                     }
                 }
             }

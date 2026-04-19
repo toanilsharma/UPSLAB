@@ -17,7 +17,7 @@ export const Faceplate: React.FC<FaceplateProps> = ({ type, data, onClose, onAct
   const load = data.loadPct ? data.loadPct.toFixed(1) : '--';
   const eff = data.efficiency ? (data.efficiency * 100).toFixed(1) : '96.5'; // Static placeholder if not dynamic
   const volt = data.voltageOut ? data.voltageOut.toFixed(1) : '--';
-  const status = data.status || (data.mode ? data.mode : 'UNKNOWN');
+  const displayStatus = type === 'staticSwitch' ? (data.mode || 'UNKNOWN') : (data.status || 'UNKNOWN');
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
@@ -33,12 +33,12 @@ export const Faceplate: React.FC<FaceplateProps> = ({ type, data, onClose, onAct
                 
                 {/* Status Indicator */}
                 <div className="flex items-center gap-4 mb-6 bg-slate-900/50 p-3 rounded border border-slate-700">
-                    <div className={`w-3 h-3 rounded-full ${status === 'NORMAL' || status === 'INVERTER' ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : status === 'STARTING' ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`}></div>
+                    <div className={`w-3 h-3 rounded-full ${displayStatus === 'NORMAL' || displayStatus === 'INVERTER' ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : displayStatus === 'STARTING' ? 'bg-blue-500 animate-pulse' : displayStatus === 'BYPASS' ? 'bg-amber-500 shadow-[0_0_10px_#f59e0b]' : 'bg-red-500'}`}></div>
                     <div className="flex-1">
-                        <div className="text-[10px] text-slate-500 uppercase">Current Status</div>
-                        <div className="text-lg font-mono font-bold text-white">{status}</div>
+                        <div className="text-[10px] text-slate-500 uppercase">{type === 'staticSwitch' ? 'Active Source' : 'Current Status'}</div>
+                        <div className="text-lg font-mono font-bold text-white">{displayStatus}</div>
                     </div>
-                    {status === 'STARTING' && data.startTimer !== undefined && (
+                    {displayStatus === 'STARTING' && data.startTimer !== undefined && (
                         <div className="text-right">
                             <div className="text-[10px] text-blue-400 uppercase font-bold">Time to Ready</div>
                             <div className="text-xl font-mono font-black text-blue-400">{data.startTimer.toFixed(1)}s</div>
@@ -92,14 +92,14 @@ export const Faceplate: React.FC<FaceplateProps> = ({ type, data, onClose, onAct
                         <>
                             <button 
                                 onClick={() => onAction('START')} 
-                                disabled={status === 'NORMAL' || status === 'STARTING'}
+                                disabled={displayStatus === 'NORMAL' || displayStatus === 'STARTING'}
                                 className="bg-green-900/50 hover:bg-green-600 disabled:opacity-30 text-green-100 py-3 rounded text-xs font-bold border border-green-800 transition-colors"
                             >
                                 START
                             </button>
                             <button 
                                 onClick={() => onAction('STOP')} 
-                                disabled={status === 'OFF'}
+                                disabled={displayStatus === 'OFF'}
                                 className="bg-red-900/50 hover:bg-red-600 disabled:opacity-30 text-red-100 py-3 rounded text-xs font-bold border border-red-800 transition-colors"
                             >
                                 STOP
@@ -113,7 +113,7 @@ export const Faceplate: React.FC<FaceplateProps> = ({ type, data, onClose, onAct
                             {type === 'rectifier' && (
                                 <button 
                                     onClick={() => onAction(data.boostCharge ? 'BOOST_OFF' : 'BOOST')} 
-                                    disabled={status !== 'NORMAL'}
+                                    disabled={displayStatus !== 'NORMAL'}
                                     className={`col-span-2 py-2 rounded text-xs font-bold border transition-colors ${data.boostCharge ? 'bg-amber-600 border-amber-400 text-white animate-pulse' : 'bg-slate-700 hover:bg-amber-700 border-slate-600 text-amber-200'}`}
                                 >
                                     {data.boostCharge ? '⚡ BOOST CHARGE ACTIVE' : '🚀 ENABLE BOOST CHARGE'}
