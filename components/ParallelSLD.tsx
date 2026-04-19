@@ -391,7 +391,7 @@ export const ParallelSLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComp
             />
 
             {/* Increased ViewBox Height to prevent bottom clipping after spacing adjustments */}
-            <svg viewBox="0 0 900 520" className="w-full h-full min-w-[900px] min-h-[520px]">
+            <svg viewBox="0 0 900 520" className="w-full h-full min-w-[900px]">
 
                 {/* Drawing title block */}
                 <g transform="translate(10, 15)">
