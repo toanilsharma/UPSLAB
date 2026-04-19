@@ -183,6 +183,103 @@ export const PROC_SYSTEM_MAINT_BYPASS: ParallelProcedure = {
     ]
 };
 
+// 1.5 System Return from Maintenance Bypass
+export const PROC_RETURN_FROM_BYPASS_PARALLEL: ParallelProcedure = {
+    id: 'system_return_bypass',
+    name: 'SOP-P-02: Return from Maint. Bypass Transfer',
+    description: 'Restore UPS to normal parallel operation from total maintenance bypass state.',
+    initialState: {
+        ...INITIAL_PARALLEL_STATE,
+        breakers: {
+            ...INITIAL_PARALLEL_STATE.breakers,
+            [ParallelBreakerId.Q1_1]: false,
+            [ParallelBreakerId.Q2_1]: false,
+            [ParallelBreakerId.Q4_1]: false,
+            [ParallelBreakerId.QF1_1]: false,
+            [ParallelBreakerId.Q3_1]: true,
+            [ParallelBreakerId.Q1_2]: false,
+            [ParallelBreakerId.Q2_2]: false,
+            [ParallelBreakerId.Q4_2]: false,
+            [ParallelBreakerId.QF1_2]: false,
+            [ParallelBreakerId.Q3_2]: true,
+        },
+        modules: {
+            module1: {
+                ...INITIAL_PARALLEL_STATE.modules.module1,
+                rectifier: { ...INITIAL_PARALLEL_STATE.modules.module1.rectifier, status: ComponentStatus.OFF, voltageOut: 0 },
+                inverter: { ...INITIAL_PARALLEL_STATE.modules.module1.inverter, status: ComponentStatus.OFF, voltageOut: 0 },
+                staticSwitch: { ...INITIAL_PARALLEL_STATE.modules.module1.staticSwitch, mode: 'BYPASS', forceBypass: true },
+                dcBusVoltage: 0,
+            },
+            module2: {
+                ...INITIAL_PARALLEL_STATE.modules.module2,
+                rectifier: { ...INITIAL_PARALLEL_STATE.modules.module2.rectifier, status: ComponentStatus.OFF, voltageOut: 0 },
+                inverter: { ...INITIAL_PARALLEL_STATE.modules.module2.inverter, status: ComponentStatus.OFF, voltageOut: 0 },
+                staticSwitch: { ...INITIAL_PARALLEL_STATE.modules.module2.staticSwitch, mode: 'BYPASS', forceBypass: true },
+                dcBusVoltage: 0,
+            }
+        },
+        voltages: {
+            ...INITIAL_PARALLEL_STATE.voltages,
+            dcBus: 0,
+            loadBus: 415,
+        }
+    },
+    steps: [
+        {
+            id: 1,
+            description: 'Close Bypass Input Breakers (Q2-1 and Q2-2).',
+            validationFn: (s) => s.breakers[ParallelBreakerId.Q2_1] && s.breakers[ParallelBreakerId.Q2_2],
+            hint: 'Energize bypass lines to sync static switches.',
+        },
+        {
+            id: 2,
+            description: 'Close Input Breakers (Q1-1 and Q1-2).',
+            validationFn: (s) => s.breakers[ParallelBreakerId.Q1_1] && s.breakers[ParallelBreakerId.Q1_2],
+        },
+        {
+            id: 3,
+            description: 'Close Battery Breakers (QF1-1 and QF1-2).',
+            validationFn: (s) => s.breakers[ParallelBreakerId.QF1_1] && s.breakers[ParallelBreakerId.QF1_2],
+        },
+        {
+            id: 4,
+            description: 'Start Rectifiers and wait for DC Bus > 200V.',
+            validationFn: (s) => s.modules.module1.dcBusVoltage > 200 && s.modules.module2.dcBusVoltage > 200,
+        },
+        {
+            id: 5,
+            description: 'Start Inverters and verify output voltage.',
+            validationFn: (s) => s.modules.module1.inverter.voltageOut > 99 && s.modules.module2.inverter.voltageOut > 99,
+        },
+        {
+            id: 6,
+            description: 'Verify System Static Switches are in BYPASS Mode.',
+            validationFn: (s) => s.modules.module1.staticSwitch.mode === 'BYPASS' && s.modules.module2.staticSwitch.mode === 'BYPASS',
+            hint: 'CRITICAL: Must be in Bypass for Make-Before-Break with Q3.',
+        },
+        {
+            id: 7,
+            description: 'Close Output Breakers (Q4-1 and Q4-2).',
+            validationFn: (s) => s.breakers[ParallelBreakerId.Q4_1] && s.breakers[ParallelBreakerId.Q4_2],
+            hint: 'Parallel the UPS bypass with the external maintenance bypass.',
+        },
+        {
+            id: 8,
+            description: 'Open Maintenance Bypass Breakers (Q3-1 and Q3-2).',
+            validationFn: (s) => !s.breakers[ParallelBreakerId.Q3_1] && !s.breakers[ParallelBreakerId.Q3_2],
+            hint: 'Isolates external maintenance path.',
+        },
+        {
+            id: 9,
+            description: 'Transfer System to INVERTER.',
+            expectedAction: { type: 'SWITCH', target: 'module1.staticSwitch', value: 'INVERTER' },
+            validationFn: (s) => s.modules.module1.staticSwitch.mode === 'INVERTER' && s.modules.module2.staticSwitch.mode === 'INVERTER',
+            hint: 'Cleanly transfers total load to protected UPS power.',
+        }
+    ]
+};
+
 // 2. Module 1 Isolation (Redundancy Test)
 export const PROC_MODULE_ISOLATION: ParallelProcedure = {
     id: 'module_iso',

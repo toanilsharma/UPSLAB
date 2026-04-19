@@ -38,16 +38,16 @@ const GlowingOrb = ({ color = "cyan", x, y, size = 500 }: any) => (
 );
 
 const FeatureList = ({ items, color }: { items: string[], color: string }) => (
-    <ul className="space-y-2 mb-6">
+    <ul className="space-y-1 mb-3">
         {items.map((item, i) => (
             <motion.li 
                 key={i} 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 * i }}
-                className="flex items-start gap-2 text-slate-300 text-sm font-medium"
+                className="flex items-start gap-2 text-slate-300 text-xs font-medium"
             >
-                <span className={`mt-1.5 w-1.5 h-1.5 rounded-full bg-${color}-500 shadow-[0_0_5px_currentColor]`}></span>
+                <span className={`mt-1 w-1.5 h-1.5 rounded-full bg-${color}-500 shadow-[0_0_5px_currentColor]`}></span>
                 {item}
             </motion.li>
         ))}
@@ -55,9 +55,9 @@ const FeatureList = ({ items, color }: { items: string[], color: string }) => (
 );
 
 const StatBadge = ({ label, value }: { label: string, value: string }) => (
-    <div className="bg-white/5 backdrop-blur-sm border border-white/10 px-3 py-2 rounded flex flex-col items-center min-w-[80px]">
-        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{label}</span>
-        <span className="text-sm font-black text-white">{value}</span>
+    <div className="bg-white/5 backdrop-blur-sm border border-white/10 px-3 py-1.5 rounded flex flex-col items-center min-w-[70px]">
+        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{label}</span>
+        <span className="text-xs font-black text-white">{value}</span>
     </div>
 );
 
@@ -109,38 +109,42 @@ const Launcher = () => {
             <CircuitBackground />
             
             {/* HEADER */}
-            <header className="fixed top-0 w-full z-50 h-20 px-8 flex items-center justify-between border-b border-white/5 bg-[#020617]/80 backdrop-blur-md">
-                <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                        <span className="text-white font-black text-xl">S</span>
+            <header className="fixed top-0 w-full z-50 h-14 px-6 flex items-center justify-between border-b border-white/5 bg-[#020617]/80 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                        <span className="text-white font-black text-base">S</span>
                     </div>
                     <div>
-                        <h1 className="font-black text-white tracking-tight text-xl leading-none">SafeOps <span className="text-cyan-400 italic">UPS</span></h1>
-                        <span className="text-[10px] font-bold text-slate-500 tracking-[0.2em] uppercase">Digital Twin Simulator</span>
+                        <h1 className="font-black text-white tracking-tight text-lg leading-none">SafeOps <span className="text-cyan-400 italic">UPS</span></h1>
+                        <span className="text-[9px] font-bold text-slate-500 tracking-[0.2em] uppercase">Digital Twin Simulator</span>
                     </div>
                 </div>
                 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-4">
+                    <div className="hidden md:flex items-center gap-2 bg-amber-950/60 border border-amber-500/30 px-3 py-1 rounded-lg">
+                        <span className="text-amber-400 text-[10px]">⚠️</span>
+                        <span className="text-amber-200/80 text-[10px] font-medium">Best experienced on <b className="text-amber-300">Laptop / Desktop</b></span>
+                    </div>
                     <button 
                         onClick={() => setShowInfo(!showInfo)}
                         className="text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors flex items-center gap-2"
                     >
-                        <span className="w-6 h-6 rounded-full border border-slate-600 flex items-center justify-center">?</span>
-                        How to Use
+                        <span className="w-5 h-5 rounded-full border border-slate-600 flex items-center justify-center text-[10px]">?</span>
+                        <span className="hidden sm:inline">How to Use</span>
                     </button>
-                    <div className="px-3 py-1 bg-cyan-950/30 border border-cyan-500/20 rounded text-[10px] font-bold text-cyan-400 tracking-wider">
-                        V2.4 STABLE
+                    <div className="px-2 py-0.5 bg-cyan-950/30 border border-cyan-500/20 rounded text-[9px] font-bold text-cyan-400 tracking-wider">
+                        V2.4
                     </div>
                 </div>
             </header>
 
-            {/* OPTIMAL EXPERIENCE BANNER (Visible primarily on smaller screens) */}
-            <div className="absolute top-24 left-0 right-0 z-40 px-6 flex justify-center text-center pointer-events-none md:hidden">
+            {/* OPTIMAL EXPERIENCE BANNER - Mobile only (full banner). Desktop uses inline header badge above. */}
+            <div className="absolute top-16 left-0 right-0 z-40 px-6 flex justify-center text-center pointer-events-none md:hidden">
                 <motion.div 
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5, duration: 0.6 }}
-                    className="bg-amber-950/80 border border-amber-500/50 text-amber-200 px-5 py-3 rounded-xl text-xs md:text-sm shadow-[0_0_25px_rgba(245,158,11,0.2)] max-w-md backdrop-blur-xl pointer-events-auto"
+                    className="bg-amber-950/80 border border-amber-500/50 text-amber-200 px-5 py-3 rounded-xl text-xs shadow-[0_0_25px_rgba(245,158,11,0.2)] max-w-md backdrop-blur-xl pointer-events-auto"
                 >
                     <div className="font-black tracking-widest uppercase mb-1 text-amber-400">⚠️ Engineering Precision Required</div>
                     <div className="text-amber-100/80 leading-relaxed">
@@ -150,7 +154,7 @@ const Launcher = () => {
             </div>
 
             {/* MAIN CONTENT - SPLIT SCREEN */}
-            <main className="flex-1 flex flex-col md:flex-row relative z-10 pt-20">
+            <main className="flex-1 flex flex-col md:flex-row relative z-10 pt-14 pb-10">
                 
                 {/* --- SINGLE MODULE CARD --- */}
                 <motion.div 
@@ -167,34 +171,33 @@ const Launcher = () => {
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent to-cyan-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     <GlowingOrb color="cyan" x="50%" y="30%" size={600} />
                     
-                    <div className="relative h-full flex flex-col justify-center px-12 md:px-20 max-w-3xl mx-auto">
+                    <div className="relative h-full flex flex-col justify-center px-8 md:px-14 max-w-3xl mx-auto py-4">
                         <motion.div 
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.2 }}
-                            className="mb-6"
+                            className="mb-2"
                         >
-                            <span className="inline-block px-3 py-1 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[10px] font-black tracking-widest uppercase mb-4 shadow-[0_0_10px_rgba(34,211,238,0.1)]">
+                            <span className="inline-block px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[9px] font-black tracking-widest uppercase mb-1">
                                 Level 1
                             </span>
-                            <h2 className="text-5xl md:text-6xl font-black text-white italic tracking-tighter mb-2 group-hover:text-cyan-100 transition-colors">
-                                Single <br/><span className="text-cyan-500">Module</span>
+                            <h2 className="text-3xl md:text-4xl font-black text-white italic tracking-tighter mb-1 group-hover:text-cyan-100 transition-colors">
+                                Single <span className="text-cyan-500">Module</span>
                             </h2>
-                            <p className="text-slate-400 text-lg font-medium max-w-md leading-relaxed group-hover:text-slate-300 transition-colors">
+                            <p className="text-slate-400 text-xs font-medium max-w-md leading-snug group-hover:text-slate-300 transition-colors">
                                 Master average power flow, battery chemistry, and static switch operations in a standard industrial environment.
                             </p>
                         </motion.div>
 
-                        {/* EXPANDABLE DETAILS */}
                         <motion.div
                              animate={{ 
                                 height: 'auto', 
                                 opacity: hoveredCard === 'SINGLE' ? 1 : 0.7,
                                 y: hoveredCard === 'SINGLE' ? 0 : 10 
                             }}
-                             className="space-y-6"
+                             className="space-y-2"
                         >
-                             <div className="flex gap-3 mb-6">
+                             <div className="flex gap-2 mb-2">
                                 <StatBadge label="Input" value="415 VAC" />
                                 <StatBadge label="Output" value="110 VAC" />
                                 <StatBadge label="DC Bus" value="220 V" />
@@ -210,8 +213,8 @@ const Launcher = () => {
                                 ]} 
                             />
 
-                            <button className="px-8 py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black tracking-wider uppercase rounded shadow-[0_0_20px_rgba(8,145,178,0.4)] flex items-center gap-3 group-hover:gap-6 transition-all w-fit">
-                                Launch Simulation <span className="text-xl">→</span>
+                            <button className="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-black text-sm tracking-wider uppercase rounded shadow-[0_0_20px_rgba(8,145,178,0.4)] flex items-center gap-3 group-hover:gap-6 transition-all w-fit">
+                                Launch Simulation <span className="text-lg">→</span>
                             </button>
                         </motion.div>
                     </div>
@@ -219,7 +222,7 @@ const Launcher = () => {
 
                  {/* --- PARALLEL MODULE CARD --- */}
                  <motion.div 
-                    className="flex-1 relative group cursor-pointer overflow-hidden border-l border-white/5"
+                    className="flex-1 relative group cursor-pointer border-l border-white/5 overflow-hidden"
                     onHoverStart={() => setHoveredCard('PARALLEL')}
                     onHoverEnd={() => setHoveredCard(null)}
                     onClick={() => setMode('PARALLEL')}
@@ -232,34 +235,33 @@ const Launcher = () => {
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent to-purple-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     <GlowingOrb color="purple" x="50%" y="70%" size={600} />
 
-                    <div className="relative h-full flex flex-col justify-center px-12 md:px-20 max-w-3xl mx-auto">
+                    <div className="relative h-full flex flex-col justify-center px-8 md:px-14 max-w-3xl mx-auto py-4">
                         <motion.div 
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.3 }}
-                            className="mb-6"
+                            className="mb-2"
                         >
-                             <span className="inline-block px-3 py-1 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-black tracking-widest uppercase mb-4 shadow-[0_0_10px_rgba(168,85,247,0.1)]">
+                             <span className="inline-block px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-black tracking-widest uppercase mb-1">
                                 Level 2
                             </span>
-                            <h2 className="text-5xl md:text-6xl font-black text-white italic tracking-tighter mb-2 group-hover:text-purple-100 transition-colors">
-                                Parallel <br/><span className="text-purple-500">System</span>
+                            <h2 className="text-3xl md:text-4xl font-black text-white italic tracking-tighter mb-1 group-hover:text-purple-100 transition-colors">
+                                Parallel <span className="text-purple-500">System</span>
                             </h2>
-                            <p className="text-slate-400 text-lg font-medium max-w-md leading-relaxed group-hover:text-slate-300 transition-colors">
+                            <p className="text-slate-400 text-xs font-medium max-w-md leading-snug group-hover:text-slate-300 transition-colors">
                                 Advanced N+1 redundancy training. Manage load sharing, synchronization, and complex isolation procedures.
                             </p>
                         </motion.div>
                         
-                         {/* EXPANDABLE DETAILS */}
                          <motion.div
                              animate={{ 
                                 height: 'auto', 
                                 opacity: hoveredCard === 'PARALLEL' ? 1 : 0.7,
                                 y: hoveredCard === 'PARALLEL' ? 0 : 10 
                             }}
-                             className="space-y-6"
+                             className="space-y-2"
                         >
-                            <div className="flex gap-3 mb-6">
+                            <div className="flex gap-2 mb-2">
                                 <StatBadge label="Modules" value="2 + 1" />
                                 <StatBadge label="Sync" value="Active PLL" />
                                 <StatBadge label="Sharing" value="Droop Control" />
@@ -275,8 +277,8 @@ const Launcher = () => {
                                 ]} 
                             />
 
-                             <button className="px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-black tracking-wider uppercase rounded shadow-[0_0_20px_rgba(147,51,234,0.4)] flex items-center gap-3 group-hover:gap-6 transition-all w-fit">
-                                Enter System <span className="text-xl">→</span>
+                             <button className="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-sm tracking-wider uppercase rounded shadow-[0_0_20px_rgba(147,51,234,0.4)] flex items-center gap-3 group-hover:gap-6 transition-all w-fit">
+                                Enter System <span className="text-lg">→</span>
                             </button>
                         </motion.div>
                     </div>
@@ -346,7 +348,7 @@ const Launcher = () => {
             </AnimatePresence>
 
             {/* FOOTER */}
-            <footer className="fixed bottom-0 w-full z-20 py-4 px-8 border-t border-white/5 bg-[#020617]/90 backdrop-blur flex justify-between items-center text-[10px] uppercase font-bold tracking-widest text-slate-500">
+            <footer className="fixed bottom-0 w-full z-20 py-2 px-6 border-t border-white/5 bg-[#020617]/90 backdrop-blur flex justify-between items-center text-[9px] uppercase font-bold tracking-widest text-slate-500">
                 <div className="flex gap-6">
                     <span className="hover:text-cyan-400 transition-colors cursor-pointer">Physics Specs</span>
                     <span className="hover:text-cyan-400 transition-colors cursor-pointer">About Dev</span>

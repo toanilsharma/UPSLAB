@@ -34,23 +34,28 @@ export const ParallelProcedurePanel: React.FC<ProcedurePanelProps> = ({
                     <div className="text-xs text-slate-400">Normal → Maintenance (UPS Isolation)</div>
                 </button>
 
+                <button onClick={() => onSelectProcedure('system_return_bypass')} className="bg-slate-700 hover:bg-blue-500 p-3 rounded text-left border border-slate-600 transition-colors border-l-4 border-l-blue-400">
+                    <div className="font-bold text-sm">SOP-02: Return from Bypass</div>
+                    <div className="text-xs text-slate-400">Maintenance → Normal Operation</div>
+                </button>
+
                 <button onClick={() => onSelectProcedure('module_iso')} className="bg-slate-700 hover:bg-teal-600 p-3 rounded text-left border border-slate-600 transition-colors">
-                    <div className="font-bold text-sm">SOP-02: Module Isolation</div>
+                    <div className="font-bold text-sm">SOP-03: Module Isolation</div>
                     <div className="text-xs text-slate-400">Isolate Module 1, Maintain Module 2</div>
                 </button>
 
                 <button onClick={() => onSelectProcedure('module1_pm')} className="bg-slate-700 hover:bg-purple-600 p-3 rounded text-left border border-slate-600 transition-colors">
-                    <div className="font-bold text-sm">SOP-03: M1 Preventive Maint</div>
+                    <div className="font-bold text-sm">SOP-04: M1 Preventive Maint</div>
                     <div className="text-xs text-slate-400">Full Isolation & Safe Discharge</div>
                 </button>
 
                 <button onClick={() => onSelectProcedure('module1_restore')} className="bg-slate-700 hover:bg-green-600 p-3 rounded text-left border border-slate-600 transition-colors">
-                    <div className="font-bold text-sm">SOP-04: M1 Restoration</div>
+                    <div className="font-bold text-sm">SOP-05: M1 Restoration</div>
                     <div className="text-xs text-slate-400">Return to Service (Sync & Parallel)</div>
                 </button>
 
                 <button onClick={() => onSelectProcedure('utility_fail_test')} className="bg-slate-700 hover:bg-amber-600 p-3 rounded text-left border border-slate-600 transition-colors">
-                    <div className="font-bold text-sm">SOP-05: Simulation of Mains Failure</div>
+                    <div className="font-bold text-sm">SOP-06: Simulation of Mains Failure</div>
                     <div className="text-xs text-slate-400">Battery Backup Verification</div>
                 </button>
 

@@ -6,7 +6,7 @@ import { ParallelProcedurePanel } from './components/ParallelProcedurePanel';
 import { ParallelFaceplate } from './components/ParallelFaceplate';
 import { ParallelDashboard } from './components/ParallelDashboard';
 import { VectorDiagram } from './components/VectorDiagram';
-import { INITIAL_PARALLEL_STATE, PROC_SYSTEM_MAINT_BYPASS, PROC_MODULE_ISOLATION, PROC_MODULE_1_PM, PROC_MODULE_1_RESTORE, PROC_UTILITY_FAILURE_TEST } from './parallel_constants';
+import { INITIAL_PARALLEL_STATE, PROC_SYSTEM_MAINT_BYPASS, PROC_RETURN_FROM_BYPASS_PARALLEL, PROC_MODULE_ISOLATION, PROC_MODULE_1_PM, PROC_MODULE_1_RESTORE, PROC_UTILITY_FAILURE_TEST } from './parallel_constants';
 import { calculateParallelPowerFlow, checkParallelInterlock } from './services/parallel_engine';
 import { ParallelUPSController } from './services/ParallelUPSController';
 import { ParallelSimulationState, ParallelBreakerId, ParallelProcedure, ComponentStatus, LogEntry, ParallelSystemMode } from './parallel_types';
@@ -358,6 +358,7 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
         }
         let proc;
         if (procId === 'sys_maint_bypass') proc = PROC_SYSTEM_MAINT_BYPASS;
+        else if (procId === 'system_return_bypass') proc = PROC_RETURN_FROM_BYPASS_PARALLEL;
         else if (procId === 'module_iso') proc = PROC_MODULE_ISOLATION;
         else if (procId === 'module1_pm') proc = PROC_MODULE_1_PM;
         else if (procId === 'module1_restore') proc = PROC_MODULE_1_RESTORE;
