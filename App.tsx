@@ -99,7 +99,7 @@ const App: React.FC<AppProps> = ({ onReturnToMenu }) => {
                     // Auto-start inverter when DC bus is stable and rectifier is normal
                     // (Disabled during procedures so user can manually start it as per SOP)
                     if (dcOK && next.components.rectifier.status === ComponentStatus.NORMAL &&
-                        next.components.inverter.status === ComponentStatus.OFF && 
+                        (next.components.inverter.status === ComponentStatus.OFF || next.components.inverter.status === ComponentStatus.FAULT) && 
                         !activeProcedure) {
                         next.components.inverter.status = ComponentStatus.STARTING;
                         addLog('AUTO: Inverter Starting (DC Stable)', 'INFO');

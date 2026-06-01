@@ -368,7 +368,7 @@ export const calculatePowerFlow = (prevState: SimulationState): SimulationState 
         outputV = s.components.inverter.voltageOut;
         sourceUsed = 'INVERTER';
     } else {
-        outputV = bypassAvailable ? s.voltages.bypassInput : 0;
+        outputV = (bypassAvailable && q2Closed) ? s.voltages.bypassInput : 0;
         sourceUsed = 'BYPASS';
     }
 
