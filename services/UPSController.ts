@@ -246,6 +246,15 @@ export class UPSController {
         const s = state.components;
 
         // =====================================================================
+        // QF1 (Battery Breaker) cannot be closed unless Rectifier is NORMAL and DC is built up (>=200V)
+        // =====================================================================
+        if (breaker === BreakerId.QF1 && !isOpenOperation) {
+            if (s.rectifier.status !== ComponentStatus.NORMAL || state.voltages.dcBus < 200) {
+                return { allowed: false, reason: 'do not switch on dc breaker first wait rectifier to build rated dc voltage.' };
+            }
+        }
+
+        // =====================================================================
         // PHASE 2 & ROW 8: Stricter Interlock (Mechanical vs Logic)
         // Q3 (Maint Bypass) cannot be closed unless STS is PHYSICALLY in Bypass
         // =====================================================================

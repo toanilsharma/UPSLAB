@@ -432,6 +432,7 @@ export const SLD: React.FC<SLDProps> = ({ state, onBreakerToggle, onComponentCli
                 </g>
 
                 <Transformer x={340} y={80} />
+                <Transformer x={230} y={40} />
 
                 {/* --- BREAKERS --- */}
                 <Breaker id={BreakerId.Q2} x={160} y={80} label="Q2" isOpen={!breakers[BreakerId.Q2]} isEnergized={bypassPostQ2} onClick={() => onBreakerToggle(BreakerId.Q2)} />

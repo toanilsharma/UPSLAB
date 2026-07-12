@@ -181,40 +181,47 @@ export const PROC_RETURN_FROM_BYPASS: Procedure = {
     },
     {
       id: 2,
-      description: 'Close Battery Breaker (QF1).',
-      expectedAction: { type: 'BREAKER', target: BreakerId.QF1, value: true },
-      validationFn: (s) => s.breakers[BreakerId.QF1],
-      hint: 'Reconnect energy storage.'
+      description: 'Start Rectifier and wait for DC Bus to build up.',
+      expectedAction: { type: 'SWITCH', target: 'rectifier', value: 'START' },
+      validationFn: (s) => s.components.rectifier.status === ComponentStatus.NORMAL && s.voltages.dcBus >= 200,
+      hint: 'Open the Rectifier Faceplate and click START. Wait for the DC Bus to charge up (~225V).'
     },
     {
       id: 3,
+      description: 'Close Battery Breaker (QF1).',
+      expectedAction: { type: 'BREAKER', target: BreakerId.QF1, value: true },
+      validationFn: (s) => s.breakers[BreakerId.QF1],
+      hint: 'Reconnect energy storage now that DC voltage is rated.'
+    },
+    {
+      id: 4,
       description: 'Start Inverter and Verify Output Voltage.',
       expectedAction: { type: 'SWITCH', target: 'inverter', value: 'START' },
       validationFn: (s) => s.components.inverter.status === ComponentStatus.NORMAL && s.components.inverter.voltageOut > 99,
       hint: 'Manually start the inverter module.'
     },
     {
-      id: 4,
+      id: 5,
       description: 'Verify Static Switch is in BYPASS Mode.',
       validationFn: (s) => s.components.staticSwitch.mode === 'BYPASS',
       hint: 'CRITICAL: Do not close Q4 if Static Switch is on Inverter while Q3 is closed (Phase sync risk).'
     },
     {
-      id: 5,
+      id: 6,
       description: 'Close UPS Output Breaker (Q4).',
       expectedAction: { type: 'BREAKER', target: BreakerId.Q4, value: true },
       validationFn: (s) => s.breakers[BreakerId.Q4],
       hint: 'Parallel the UPS bypass line with the maintenance bypass line.'
     },
     {
-      id: 6,
+      id: 7,
       description: 'Open Maintenance Bypass Breaker (Q3).',
       expectedAction: { type: 'BREAKER', target: BreakerId.Q3, value: false },
       validationFn: (s) => !s.breakers[BreakerId.Q3],
       hint: 'Isolate the maintenance path.'
     },
     {
-      id: 7,
+      id: 8,
       description: 'Transfer Static Switch to INVERTER Mode.',
       expectedAction: { type: 'SWITCH', target: 'staticSwitch', value: 'INVERTER' },
       validationFn: (s) => s.components.staticSwitch.mode === 'INVERTER',
@@ -322,31 +329,40 @@ export const PROC_COLD_START: Procedure = {
   steps: [
     {
       id: 1,
-      description: 'Close Rectifier Input Breaker (Q1) to charge DC Bus.',
+      description: 'Close Rectifier Input Breaker (Q1).',
       expectedAction: { type: 'BREAKER', target: BreakerId.Q1, value: true },
-      validationFn: (s) => s.breakers[BreakerId.Q1] && s.voltages.dcBus > 200,
-      hint: 'Close Q1, then open Rectifier Faceplate and click START.',
+      validationFn: (s) => s.breakers[BreakerId.Q1],
+      hint: 'Close Q1 to supply utility power to rectifier.'
     },
     {
       id: 2,
-      description: 'Close Battery Breaker (QF1).',
-      expectedAction: { type: 'BREAKER', target: BreakerId.QF1, value: true },
-      validationFn: (s) => s.breakers[BreakerId.QF1],
+      description: 'Start Rectifier and wait for DC Bus to build up.',
+      expectedAction: { type: 'SWITCH', target: 'rectifier', value: 'START' },
+      validationFn: (s) => s.components.rectifier.status === ComponentStatus.NORMAL && s.voltages.dcBus >= 200,
+      hint: 'Open the Rectifier Faceplate and click START. Wait for the DC Bus to charge up (~225V).'
     },
     {
       id: 3,
-      description: 'Start Inverter.',
-      expectedAction: { type: 'SWITCH', target: 'inverter', value: 'START' },
-      validationFn: (s) => s.components.inverter.status === ComponentStatus.NORMAL,
+      description: 'Close Battery Breaker (QF1).',
+      expectedAction: { type: 'BREAKER', target: BreakerId.QF1, value: true },
+      validationFn: (s) => s.breakers[BreakerId.QF1],
+      hint: 'Now that the DC bus is charged, close the battery breaker.'
     },
     {
       id: 4,
+      description: 'Start Inverter.',
+      expectedAction: { type: 'SWITCH', target: 'inverter', value: 'START' },
+      validationFn: (s) => s.components.inverter.status === ComponentStatus.NORMAL,
+      hint: 'Start the inverter module.'
+    },
+    {
+      id: 5,
       description: 'Close UPS Output Breaker (Q4).',
       expectedAction: { type: 'BREAKER', target: BreakerId.Q4, value: true },
       validationFn: (s) => s.breakers[BreakerId.Q4],
     },
     {
-      id: 5,
+      id: 6,
       description: 'Energize Critical Loads.',
       validationFn: (s) => s.breakers[BreakerId.Load1] && s.breakers[BreakerId.Load2] && s.voltages.loadBus > 99,
     }

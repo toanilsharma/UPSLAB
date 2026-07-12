@@ -353,8 +353,8 @@ const Launcher = () => {
                     <span className="hover:text-cyan-400 transition-colors cursor-pointer">Physics Specs</span>
                     <span className="hover:text-cyan-400 transition-colors cursor-pointer">About Dev</span>
                 </div>
-                <div>
-                     Engineered by <span className="text-cyan-600">Anil Sharma</span>
+                <div className="text-slate-300 text-[12px] normal-case">
+                     Engineered by <span className="text-cyan-400 font-black tracking-wider hover:text-cyan-300 transition-colors duration-300 text-sm">Anil Sharma</span>
                 </div>
             </footer>
         </div>
