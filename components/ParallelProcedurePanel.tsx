@@ -26,40 +26,40 @@ export const ParallelProcedurePanel: React.FC<ProcedurePanelProps> = ({
 
     if (!procedure) {
         return (
-            <div className="h-full p-4 pl-6 flex flex-col gap-4 overflow-y-auto">
-                <h2 className="text-xl font-bold text-slate-200">Parallel SOPs</h2>
+            <div className="h-full p-4 pl-6 flex flex-col gap-2.5 overflow-y-auto">
+                <h2 className="text-lg font-bold text-slate-200">Parallel SOPs</h2>
 
-                <button onClick={() => onSelectProcedure('sys_maint_bypass')} className="bg-slate-700 hover:bg-blue-600 p-3 rounded text-left border border-slate-600 transition-colors">
+                <button onClick={() => onSelectProcedure('sys_maint_bypass')} className="bg-slate-700 hover:bg-blue-600 py-1.5 px-3 rounded text-left border border-slate-600 transition-colors">
                     <div className="font-bold text-sm">SOP-01: Maint. Bypass Transfer</div>
-                    <div className="text-xs text-slate-400">Normal → Maintenance (UPS Isolation)</div>
+                    <div className="text-[11px] text-slate-400">Normal → Maintenance (UPS Isolation)</div>
                 </button>
 
-                <button onClick={() => onSelectProcedure('system_return_bypass')} className="bg-slate-700 hover:bg-blue-500 p-3 rounded text-left border border-slate-600 transition-colors border-l-4 border-l-blue-400">
+                <button onClick={() => onSelectProcedure('system_return_bypass')} className="bg-slate-700 hover:bg-blue-500 py-1.5 px-3 rounded text-left border border-slate-600 transition-colors border-l-4 border-l-blue-400">
                     <div className="font-bold text-sm">SOP-02: Return from Bypass</div>
-                    <div className="text-xs text-slate-400">Maintenance → Normal Operation</div>
+                    <div className="text-[11px] text-slate-400">Maintenance → Normal Operation</div>
                 </button>
 
-                <button onClick={() => onSelectProcedure('module_iso')} className="bg-slate-700 hover:bg-teal-600 p-3 rounded text-left border border-slate-600 transition-colors">
+                <button onClick={() => onSelectProcedure('module_iso')} className="bg-slate-700 hover:bg-teal-600 py-1.5 px-3 rounded text-left border border-slate-600 transition-colors">
                     <div className="font-bold text-sm">SOP-03: Module Isolation</div>
-                    <div className="text-xs text-slate-400">Isolate Module 1, Maintain Module 2</div>
+                    <div className="text-[11px] text-slate-400">Isolate Module 1, Maintain Module 2</div>
                 </button>
 
-                <button onClick={() => onSelectProcedure('module1_pm')} className="bg-slate-700 hover:bg-purple-600 p-3 rounded text-left border border-slate-600 transition-colors">
+                <button onClick={() => onSelectProcedure('module1_pm')} className="bg-slate-700 hover:bg-purple-600 py-1.5 px-3 rounded text-left border border-slate-600 transition-colors">
                     <div className="font-bold text-sm">SOP-04: M1 Preventive Maint</div>
-                    <div className="text-xs text-slate-400">Full Isolation & Safe Discharge</div>
+                    <div className="text-[11px] text-slate-400">Full Isolation & Safe Discharge</div>
                 </button>
 
-                <button onClick={() => onSelectProcedure('module1_restore')} className="bg-slate-700 hover:bg-green-600 p-3 rounded text-left border border-slate-600 transition-colors">
+                <button onClick={() => onSelectProcedure('module1_restore')} className="bg-slate-700 hover:bg-green-600 py-1.5 px-3 rounded text-left border border-slate-600 transition-colors">
                     <div className="font-bold text-sm">SOP-05: M1 Restoration</div>
-                    <div className="text-xs text-slate-400">Return to Service (Sync & Parallel)</div>
+                    <div className="text-[11px] text-slate-400">Return to Service (Sync & Parallel)</div>
                 </button>
 
-                <button onClick={() => onSelectProcedure('utility_fail_test')} className="bg-slate-700 hover:bg-amber-600 p-3 rounded text-left border border-slate-600 transition-colors">
+                <button onClick={() => onSelectProcedure('utility_fail_test')} className="bg-slate-700 hover:bg-amber-600 py-1.5 px-3 rounded text-left border border-slate-600 transition-colors">
                     <div className="font-bold text-sm">SOP-06: Simulation of Mains Failure</div>
-                    <div className="text-xs text-slate-400">Battery Backup Verification</div>
+                    <div className="text-[11px] text-slate-400">Battery Backup Verification</div>
                 </button>
 
-                <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-700/50 rounded text-xs text-yellow-200 leading-relaxed">
+                <div className="mt-2 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded text-xs text-yellow-200 leading-normal">
                     ⚠️ <strong>WARNING:</strong> Parallel Switching requires strict synchronization. Ensure Phase Angle &lt; 5° before closing output breakers.
                 </div>
             </div>

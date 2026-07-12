@@ -25,33 +25,33 @@ export const ProcedurePanel: React.FC<ProcedurePanelProps> = ({
 
   if (!procedure) {
     return (
-      <div className="procedure-panel h-full p-4 pl-6 flex flex-col gap-4 overflow-y-auto">
-        <h2 className="text-xl font-bold text-slate-200">Standard Operating Procedures</h2>
-        <button onClick={() => onSelectProcedure('maint_bypass')} className="bg-slate-700 hover:bg-blue-600 p-3 rounded text-left border border-slate-600">
-          <div className="font-bold">SOP-01: Maint. Bypass Transfer</div>
-          <div className="text-xs text-slate-400">Normal -&gt; Maintenance (UPS Isolation)</div>
+      <div className="procedure-panel h-full p-4 pl-6 flex flex-col gap-2.5 overflow-y-auto">
+        <h2 className="text-lg font-bold text-slate-200">Standard Operating Procedures</h2>
+        <button onClick={() => onSelectProcedure('maint_bypass')} className="bg-slate-700 hover:bg-blue-600 py-1.5 px-3 rounded text-left border border-slate-600 transition-colors">
+          <div className="font-bold text-sm">SOP-01: Maint. Bypass Transfer</div>
+          <div className="text-[11px] text-slate-400">Normal -&gt; Maintenance (UPS Isolation)</div>
         </button>
-        <button onClick={() => onSelectProcedure('return_bypass')} className="bg-slate-700 hover:bg-blue-600 p-3 rounded text-left border border-slate-600">
-          <div className="font-bold">SOP-02: Return from Bypass</div>
-          <div className="text-xs text-slate-400">Maintenance -&gt; Normal (Make-Before-Break)</div>
+        <button onClick={() => onSelectProcedure('return_bypass')} className="bg-slate-700 hover:bg-blue-600 py-1.5 px-3 rounded text-left border border-slate-600 transition-colors">
+          <div className="font-bold text-sm">SOP-02: Return from Bypass</div>
+          <div className="text-[11px] text-slate-400">Maintenance -&gt; Normal (Make-Before-Break)</div>
         </button>
-        <button onClick={() => onSelectProcedure('black_start')} className="bg-slate-700 hover:bg-orange-600 p-3 rounded text-left border border-slate-600">
-          <div className="font-bold">SOP-03: Black Start</div>
-          <div className="text-xs text-slate-400">Dead Bus Recovery via Battery</div>
+        <button onClick={() => onSelectProcedure('black_start')} className="bg-slate-700 hover:bg-orange-600 py-1.5 px-3 rounded text-left border border-slate-600 transition-colors">
+          <div className="font-bold text-sm">SOP-03: Black Start</div>
+          <div className="text-[11px] text-slate-400">Dead Bus Recovery via Battery</div>
         </button>
-        <button onClick={() => onSelectProcedure('cold_start')} className="bg-slate-700 hover:bg-teal-600 p-3 rounded text-left border border-slate-600">
-          <div className="font-bold">SOP-04: Cold Start</div>
-          <div className="text-xs text-slate-400">Energize from Total Shutdown</div>
+        <button onClick={() => onSelectProcedure('cold_start')} className="bg-slate-700 hover:bg-teal-600 py-1.5 px-3 rounded text-left border border-slate-600 transition-colors">
+          <div className="font-bold text-sm">SOP-04: Cold Start</div>
+          <div className="text-[11px] text-slate-400">Energize from Total Shutdown</div>
         </button>
-        <button onClick={() => onSelectProcedure('emergency')} className="bg-slate-700 hover:bg-red-600 p-3 rounded text-left border border-slate-600 ring-1 ring-red-500">
-          <div className="font-bold">SOP-05: EMERGENCY ISOLATION</div>
-          <div className="text-xs text-slate-400">Fire / Overload Response</div>
+        <button onClick={() => onSelectProcedure('emergency')} className="bg-slate-700 hover:bg-red-600 py-1.5 px-3 rounded text-left border border-slate-600 ring-1 ring-red-500 transition-colors">
+          <div className="font-bold text-sm">SOP-05: EMERGENCY ISOLATION</div>
+          <div className="text-[11px] text-slate-400">Fire / Overload Response</div>
         </button>
-        <button onClick={() => onSelectProcedure('failure_recovery')} className="bg-slate-700 hover:bg-purple-600 p-3 rounded text-left border border-slate-600">
-          <div className="font-bold">SOP-06: RECTIFIER FAULT</div>
-          <div className="text-xs text-slate-400">Live Failure Recovery Drill</div>
+        <button onClick={() => onSelectProcedure('failure_recovery')} className="bg-slate-700 hover:bg-purple-600 py-1.5 px-3 rounded text-left border border-slate-600 transition-colors">
+          <div className="font-bold text-sm">SOP-06: RECTIFIER FAULT</div>
+          <div className="text-[11px] text-slate-400">Live Failure Recovery Drill</div>
         </button>
-        <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-700/50 rounded text-sm text-yellow-200">
+        <div className="mt-2 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded text-xs text-yellow-200 leading-normal">
           WARNING: Select a procedure to begin training. Deviations from SOP may result in simulated equipment damage or load loss.
         </div>
       </div>

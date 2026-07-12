@@ -650,6 +650,10 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                     />
                 </div>
             )}
+            {/* FLOATING DEVELOPER CREDIT AT BOTTOM RIGHT */}
+            <div className="fixed bottom-2 right-2 z-50 text-[10px] text-slate-500 font-bold bg-slate-950/80 backdrop-blur-sm px-2 py-1 rounded border border-white/5 pointer-events-none select-none">
+                Engineered by <span className="text-cyan-400 font-extrabold tracking-wider">Anil Sharma</span>
+            </div>
         </div>
     );
 };
