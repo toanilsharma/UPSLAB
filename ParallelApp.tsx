@@ -439,6 +439,9 @@ const ParallelApp: React.FC<ParallelAppProps> = ({ onReturnToMenu }) => {
                             <ParallelDashboard state={state} />
                         </div>
                         <div className="flex items-center gap-2 relative z-10 flex-shrink-0">
+                            <button onClick={onReturnToMenu} className="flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-cyan-500/50 rounded text-xs font-bold text-white transition-all shadow-md" title="Return to Home Screen">
+                                🏠 <span className="hidden sm:inline">HOME</span>
+                            </button>
                             <button onClick={() => startProcedure('')} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-500 border border-green-400 rounded text-xs font-bold text-white transition-colors shadow-md" title="Reset System">
                                 🔄 <span className="hidden sm:inline">RESET</span>
                             </button>
